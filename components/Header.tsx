@@ -6,6 +6,7 @@ import { Menu ,Coins,Leaf,Search,Bell,User,ChevronDown,LogIn,LogOut} from "lucid
 import { Web3Auth } from "@web3auth/modal"
 import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK} from "@web3auth/base"
 import { EthereumPrivateKeyProvider} from "@web3auth/ethereum-provider"
+import { createUser, getUnreadNotifications, getUserBalance, getUserByEmail } from "@/utils/db/actions"
 // import { useMediaQuery } from ""
 
 
@@ -64,14 +65,78 @@ const [balace,setBalance]=useState(0)
 
                 if(user.email){
                     localStorage.setItem('userEmail',user.email)
-                    await createUser(user.name,user.email)
+                    try {
+                    await createUser(user?.email,user.name || "Anonymous user")
+                    } catch (error) {
+                        console.error("Error in creating user",error);
+                        
+                    }
                 }
             }
         } catch (error) {
+            console.error("Error in initializing  web3auth",error);
             
+        }finally{
+            setLoading(false)
         }
-      }
+      };
+
+        init()
    },[])
+
+
+      useEffect(()=>{
+        const fetchNotifications= async()=> {
+            try {
+                if(userInfo && userInfo.email){
+                    const user= await getUserByEmail(userInfo.email)
+                    if(user){
+                        const unreadNotifications= await getUnreadNotifications(user._id)
+                        setNotification(unreadNotifications)
+                    }
+                }
+            } catch (error) {
+            console.error("Error in fetching notifications",error);
+            }
+        }
+
+          fetchNotifications();
+
+          const notificationInterval= setInterval(fetchNotifications,30000)
+          return ()=> clearInterval(notificationInterval)
+          
+      },[userInfo]);
+
+
+
+        useEffect(()=>{
+          const fetchUserBalance= async()=>{
+            try {
+                if(userInfo && userInfo){
+                    const user=await getUserByEmail(userInfo.email)
+                    if(user){
+                        const userBalance= await getUserBalance(user._id)
+                        setBalance(userBalance)
+                    }
+                }
+            } catch (error) {
+            console.error("Error in fetching balance",error);
+            }
+          }
+
+            fetchUserBalance();
+
+            const handleBalanceUpdate= (event: CustomEvent)=>{
+               setBalance(event.detail)
+            }
+
+             window.addEventListener('balanceUpdate',handleBalanceUpdate  as EventListener)
+
+             return ()=>{
+             window.removeEventListener('balanceUpdate',handleBalanceUpdate  as EventListener)   
+             }
+
+        },[userInfo])
 
   return (
     <div>Header</div>
