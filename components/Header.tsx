@@ -7,12 +7,9 @@ import { Web3Auth } from "@web3auth/modal"
 import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK} from "@web3auth/base"
 import { EthereumPrivateKeyProvider} from "@web3auth/ethereum-provider"
 import { createUser, getUnreadNotifications, getUserBalance, getUserByEmail,markNotificationAsRead } from "@/utils/db/actions"
-// import { useMediaQuery } from ""
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 
 
-
-
-const clientId = process.env.WEB3_AUTH_CLIENT_ID ;
 
 
 
@@ -32,7 +29,7 @@ const privateKeyProvider= new EthereumPrivateKeyProvider({
 })
 
 const web3Auth= new Web3Auth({
-    clientId,
+    clientId:process.env.WEB3_AUTH_CLIENT_ID as string,
     web3AuthNetwork: WEB3AUTH_NETWORK.TESTNET,
     privateKeyProvider
 })
@@ -52,6 +49,8 @@ const [userInfo,setUserInfo]=useState<any>(null)
 const pathname=usePathname()
 const [notification,setNotification]=useState<Notification[]>([])
 const [balace,setBalance]=useState(0)
+
+const isMobile= useMediaQuery("(max-width: 768px)");
 
 
    useEffect(()=>{
@@ -223,12 +222,69 @@ const [balace,setBalance]=useState(0)
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="flex items-center justify-between px-4 py-2">
+
             <div className="flex items-center">
             <button className="btn mr-2 md:mr-4" onClick={onMenuClick}>
-                 <Menu className="h-6 w-6" />
+                 <Menu className="h-6 w-6 text-gray-800" />
             </button>
+            <Link href='/' className="flex items-center">
+               <Leaf className="h-6 w-6 md:h-8 md:w-8 text-green-500 mr-1 md:mr-2"/>
+               <span className="font-bold text-base md:text-lg text-gray-800">WasteZen</span>
+            </Link>
             </div>
-        </div>
+
+           {!isMobile && (
+                <div className="flex-1 max-w-xl mx-4">
+                   <div className="relative">
+                        <input
+                        type="text"
+                        placeholder="search...."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 opacity-70"/>
+                   </div>
+                </div>
+             )}
+
+          <div className="flex items-center">
+                {isMobile && (
+                  <button className="btn mr-2">
+                    <Search className="h-5 w-5" />
+                 </button>
+                )}
+    <div>
+    <details className="dropdown">
+    <summary className="btn mr-2 relative">
+    <Bell className="h-5 w-5 text-gray-800"/>
+                 <div className="badge badge-secondary px-2 min-w-[1.2rem] h-5">
+                   {notification.length}
+                 </div>
+    </summary>
+      <div className="menu dropdown-content bg-base-100 rounded-box z-[1] w-64 p-2 shadow">
+        {notification.length > 0 ? (
+            
+            notification.map((notific:any)=> (
+              <div  key={notific._id}
+               onClick={()=> handleNotificationClick(notific._id)}
+                className="flex flex-col"
+               >
+               <span>{notific.type}</span>
+               <span>{notific.message}</span>   
+             </div>   
+            ))
+             
+        ):(
+              <div>8y</div>
+        )}
+        
+      </div>
+       </details>
+       </div>
+                                   
+              </div>
+
+              
+         </div>
     </header>
   )
 }
