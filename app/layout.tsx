@@ -34,6 +34,7 @@ import { useState, useEffect } from "react"
 import { Inter } from "next/font/google"
 import "./globals.css";
 import { Toaster } from "react-hot-toast"
+import Header from "@/components/Header";
 
 
 
@@ -60,6 +61,8 @@ export default function RootLayout({
         <div className="min-h-screen bg-gray-50 flex flex-col">
 
           {/* header */}
+           <Header onMenuClick={()=> setSidebarOpen(!sidebarOpen)} totalEarnings={totalEarnings} />
+
           <div className="flex flex-1">
 
             {/* sidebar */}

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+
+
 // User Schema
 const UserSchema = new mongoose.Schema({
     email: {
@@ -15,7 +17,7 @@ const UserSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-const Users = mongoose.models.User || mongoose.model('User', UserSchema);
+const Users =  mongoose.model('User', UserSchema);
 
 // Report Schema
 const reportSchema = new mongoose.Schema({
@@ -57,7 +59,7 @@ const reportSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-const Reports = mongoose.models.Report || mongoose.model('Report', reportSchema);
+const Reports = mongoose.model('Report', reportSchema);
 
 
 //Reward Schema
@@ -93,7 +95,7 @@ const rewardShema = new mongoose.Schema({
     timestamps: true
 });
 
-const Rewards = mongoose.models.Reward || mongoose.model('Reward', rewardShema)
+const Rewards = mongoose.model('Reward', rewardShema)
 
 
 //ColectedWaste Schema
@@ -125,7 +127,7 @@ const CollectedWasteSchema = new mongoose.Schema({
     timestamps: true
 });
 
-const CollcetedWastes = mongoose.models.CollectedWaste || mongoose.model('CollectedWaste', CollectedWasteSchema)
+const CollcetedWastes = mongoose.model('CollectedWaste', CollectedWasteSchema)
 
 
 //notifiaction schema
@@ -154,7 +156,7 @@ const notificationSchema = new mongoose.Schema({
 });
 
 
-const Notifications = mongoose.models.Notification || mongoose.model('Notification', notificationSchema)
+const Notifications = mongoose.model('Notification', notificationSchema)
 
 
 
@@ -184,7 +186,7 @@ const transactionShema = new mongoose.Schema({
     }
 });
 
-const Transactions = mongoose.models.Transaction || mongoose.model('Transaction', transactionShema)
+const Transactions =  mongoose.model('Transaction', transactionShema)
 
 
 

@@ -50,6 +50,9 @@ export async function getUnreadNotifications(userId: string | number){
 
 export async function getUserBalance(userId: string | number): Promise<number>{
     try {
+
+        await dbConnect();
+
         const transactions = await getRewardTransactions(userId) || []; 
         if(!transactions) return 0;
          const balance= transactions?.reduce((acc:number, transaction:any)=> {
@@ -66,6 +69,8 @@ export async function getUserBalance(userId: string | number): Promise<number>{
 
 export async function getRewardTransactions(userId: string | number){
     try {
+      
+        // await dbConnect();
 
         const transactions = await Transactions.find({
             userId
@@ -85,7 +90,23 @@ export async function getRewardTransactions(userId: string | number){
           return formattedTransactions;
             
     } catch (error) {
-         console.error("Error fetching unraed notifications",error);
+         console.error("Error fetching unread notifications",error);
          return null
+    }
+}
+
+
+
+export async function  markNotificationAsRead(notificationId: string | number){
+    try {
+        await dbConnect();
+
+        await Notifications.updateOne({ _id: notificationId},{
+           $set : {isRead:true }
+        });
+        
+    } catch (error) {
+        console.error("Error in mark notifications",error);
+        return null
     }
 }
