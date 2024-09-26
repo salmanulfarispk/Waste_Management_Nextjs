@@ -53,7 +53,6 @@ const [balace,setBalance]=useState(0)
 
 const isMobile= useMediaQuery("(max-width: 768px)");
 
-
    useEffect(()=>{
       const init= async()=>{
         try {
