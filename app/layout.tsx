@@ -43,9 +43,9 @@ const inter = Inter({ subsets: ['latin'] })
 
 export default function RootLayout({
   children
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
 
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
