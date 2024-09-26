@@ -52,12 +52,12 @@ export default function Sidebar({ open }: SidebarProps) {
                 className={`flex items-center w-full justify-start py-3 px-3 rounded-lg transition-colors duration-300
                  ${
                    pathname === item.href
-                     ? "bg-green-500 text-white hover:bg-green-600"
+                     ? "bg-green-100 text-green-800 hover:bg-green-200"
                      : "text-gray-600 hover:bg-gray-100"
                  }`}
               >
                 <item.icon className="mr-3 h-5 w-5" />
-                <span className="text-base">{item.label}</span>
+                <span className="text-base font-semibold">{item.label}</span>
               </div>
             </Link>
           ))}
@@ -74,7 +74,7 @@ export default function Sidebar({ open }: SidebarProps) {
                  }`}
             >
               <Settings className="mr-3 h-5 w-5" />
-              <span className="text-base">Settings</span>
+              <span className="text-base font-semibold">Settings</span>
             </div>
           </Link>
         </div>
