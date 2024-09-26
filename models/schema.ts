@@ -1,14 +1,14 @@
 import mongoose from "mongoose";
-
+import  { Schema,model} from "mongoose"
 
 
 
 // User Schema
-const UserSchema = new mongoose.Schema({
+const UserSchema = new Schema({
     email: {
         type: String,
         required: true,
-        unique: true,
+        unique: true, 
     },
     name: {
         type: String,
@@ -18,13 +18,13 @@ const UserSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-const Users =  mongoose.model('User', UserSchema);
+const Users = model('user', UserSchema);
 
 // Report Schema
-const reportSchema = new mongoose.Schema({
+const reportSchema = new Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'user',
         required: true,
     },
     location: {
@@ -43,7 +43,7 @@ const reportSchema = new mongoose.Schema({
         type: String,
     },
     verification_result: {
-        type: mongoose.Schema.Types.Mixed, // Use Mixed for JSON-like data
+        type: mongoose.Schema.Types.Mixed,      // Use Mixed for JSON-like data
         required: true,
     },
     status: {
@@ -53,22 +53,22 @@ const reportSchema = new mongoose.Schema({
     },
     collectorId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'user',
         required: true,
     }
 }, {
     timestamps: true,
 });
 
-const Reports = mongoose.model('Report', reportSchema);
+const Reports =  model('report', reportSchema);
 
 
 //Reward Schema
 
-const rewardSchema = new mongoose.Schema({
+const rewardSchema = new Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'user',
         required: true,
     },
     points: {
@@ -96,27 +96,28 @@ const rewardSchema = new mongoose.Schema({
     timestamps: true
 });
 
-const Rewards = mongoose.model('Reward', rewardSchema);
+const Rewards = model('reward', rewardSchema);
 
 
 //ColectedWaste Schema
 
 
-const CollectedWasteSchema = new mongoose.Schema({
+const CollectedWasteSchema = new Schema({
 
     reportId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Report',
+        ref: 'report',
         required: true,
     },
     collectorId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'user',
         required: true,
     },
     collectedDate: {
         type: Date,
         required: true,
+        default: Date.now,
     },
     status: {
         type: String,
@@ -128,15 +129,15 @@ const CollectedWasteSchema = new mongoose.Schema({
     timestamps: true
 });
 
-const CollcetedWastes = mongoose.model('CollectedWaste', CollectedWasteSchema);
+const CollectedWastes = model('collectedWaste', CollectedWasteSchema);
 
 
 //notifiaction schema
 
-const notificationSchema = new mongoose.Schema({
+const notificationSchema = new Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'user',
         required: true,
     },
     message: {
@@ -157,14 +158,14 @@ const notificationSchema = new mongoose.Schema({
 });
 
 
-const Notifications = mongoose.model('Notification', notificationSchema);
+const Notifications = model('notification', notificationSchema);
 
 
-const transactionSchema = new mongoose.Schema({
+const transactionSchema = new Schema({
 
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        ref: "user",
         required: true
     },
     type: {
@@ -186,7 +187,7 @@ const transactionSchema = new mongoose.Schema({
     }
 });
 
-const Transactions =mongoose.model('Transaction', transactionSchema);
+const Transactions = model('transaction', transactionSchema);
 
 
 
@@ -195,7 +196,7 @@ export {
     Users,
     Reports,
     Rewards,
-    CollcetedWastes,
+    CollectedWastes,
     Notifications,
     Transactions
 };

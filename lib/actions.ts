@@ -1,16 +1,17 @@
-import { dbConnect } from "./dbConfig"
-import { Users,Notifications, Transactions} from "./schema"
-
+"use server"
+import { Users,Notifications, Transactions} from "../models/schema"
+import connectDB from "./dbConfig";
 
 
 export const createUser= async(email:string,name:string): Promise<any | null>=>{
-    try {
 
-        await dbConnect();
+    try {
+        await connectDB();
         const  user=await Users.create({
             email,
             name
         });
+         
         return user;
         
     } catch (error) {
@@ -24,7 +25,8 @@ export const createUser= async(email:string,name:string): Promise<any | null>=>{
 
 export const getUserByEmail=async(email: string): Promise<any | null>=>{
     try {
-        await dbConnect();
+        
+        await connectDB();
         const user=await Users.findOne({email})
          return user;
     } catch (error) {
@@ -36,7 +38,8 @@ export const getUserByEmail=async(email: string): Promise<any | null>=>{
 
 export async function getUnreadNotifications(userId: string | number){
     try {
-        await dbConnect();
+        
+        await connectDB();
          return await Notifications.find({
             userId,
             isRead: false
@@ -51,8 +54,7 @@ export async function getUnreadNotifications(userId: string | number){
 export async function getUserBalance(userId: string | number): Promise<number>{
     try {
 
-        await dbConnect();
-
+        await connectDB();
         const transactions = await getRewardTransactions(userId) || []; 
         if(!transactions) return 0;
          const balance= transactions?.reduce((acc:number, transaction:any)=> {
@@ -70,8 +72,6 @@ export async function getUserBalance(userId: string | number): Promise<number>{
 export async function getRewardTransactions(userId: string | number){
     try {
       
-        // await dbConnect();
-
         const transactions = await Transactions.find({
             userId
         }).select({
@@ -99,8 +99,8 @@ export async function getRewardTransactions(userId: string | number){
 
 export async function  markNotificationAsRead(notificationId: string | number){
     try {
-        await dbConnect();
 
+        await connectDB();
         await Notifications.updateOne({ _id: notificationId},{
            $set : {isRead:true }
         });

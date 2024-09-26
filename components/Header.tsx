@@ -1,3 +1,4 @@
+//@ts-nocheck
 "use client"
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -6,7 +7,7 @@ import { Menu ,Coins,Leaf,Search,Bell,User,ChevronDown,LogIn,LogOut} from "lucid
 import { Web3Auth } from "@web3auth/modal"
 import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK} from "@web3auth/base"
 import { EthereumPrivateKeyProvider} from "@web3auth/ethereum-provider"
-import { createUser, getUnreadNotifications, getUserBalance, getUserByEmail,markNotificationAsRead } from "@/utils/db/actions"
+import { createUser, getUnreadNotifications, getUserBalance, getUserByEmail,markNotificationAsRead } from "@/lib/actions"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 
 
@@ -67,7 +68,7 @@ const isMobile= useMediaQuery("(max-width: 768px)");
                 if(user.email){
                     localStorage.setItem('userEmail',user.email)
                     try {
-                    await createUser(user?.email,user.name || "Anonymous user")
+                    await createUser(user.email,user.name || "Anonymous user")
                     } catch (error) {
                         console.error("Error in creating user",error);
                         
@@ -93,7 +94,7 @@ const isMobile= useMediaQuery("(max-width: 768px)");
                     const user= await getUserByEmail(userInfo.email)
                     if(user){
                         const unreadNotifications= await getUnreadNotifications(user._id)
-                        setNotification(unreadNotifications)
+                        setNotification(unreadNotifications) 
                     }
                 }
             } catch (error) {
@@ -225,7 +226,7 @@ const isMobile= useMediaQuery("(max-width: 768px)");
 
             <div className="flex items-center">
             <button className="btn mr-2 md:mr-4" onClick={onMenuClick}>
-                 <Menu className="h-6 w-6 text-gray-800" />
+                 <Menu className="h-5 w-5 text-gray-800" />
             </button>
             <Link href='/' className="flex items-center">
                <Leaf className="h-6 w-6 md:h-8 md:w-8 text-green-500 mr-1 md:mr-2"/>
@@ -253,14 +254,16 @@ const isMobile= useMediaQuery("(max-width: 768px)");
                  </button>
                 )}
     <div>
-    <details className="dropdown">
-    <summary className="btn mr-2 relative">
+    <details className="dropdown dropdown-bottom dropdown-end">
+    <summary className="btn mr-2 relative bg-transparent shadow-none border-none hover:bg-gray-100">
     <Bell className="h-5 w-5 text-gray-800"/>
+          {notification.length > 0 &&(
                  <div className="badge badge-secondary px-2 min-w-[1.2rem] h-5">
                    {notification.length}
                  </div>
-    </summary>
-      <div className="menu dropdown-content bg-base-100 rounded-box z-[1] w-64 p-2 shadow">
+                 )}
+     </summary>
+      <div className="menu dropdown-content bg-base-100 rounded-md z-[1] w-64 p-1 shadow">
         {notification.length > 0 ? (
             
             notification.map((notific:any)=> (
@@ -268,22 +271,64 @@ const isMobile= useMediaQuery("(max-width: 768px)");
                onClick={()=> handleNotificationClick(notific._id)}
                 className="flex flex-col"
                >
-               <span>{notific.type}</span>
-               <span>{notific.message}</span>   
+               <span className="font-medium">{notific.type}</span>
+               <span className="text-sm text-gray-500">{notific.message}</span>   
              </div>   
             ))
              
         ):(
-              <div>8y</div>
+            <div className="flex flex-col w-full h-fit">
+             <span className="font-medium hover:bg-gray-100 p-2 rounded-md">No new notifications</span>
+             </div>
         )}
-        
+
       </div>
        </details>
-       </div>
-                                   
-              </div>
+       </div>    
 
-              
+
+         <div className="mr-2 md:mr-2 flex items-center bg-gray-100 rounded-full px-2 md:px-3 py-1">
+            <Coins className="h-4 w-4 md:h-5 md:w-5 mr-1 text-green-500"/>
+            <span className="font-semibold text-sm md:text-base text-gray-800">
+               {balace.toFixed(2)}
+            </span>
+         </div>
+
+
+           {!loggedIn ? (
+
+                <button className="py-2 px-3 rounded-md  bg-green-600 hover:bg-green-700 text-white text-sm md:text-base" onClick={login}>
+                    <span className="flex">Login
+                   <LogIn className="ml-1 md:ml-2 h-4 w-4 md:h-5 md:w-5 mt-[.1rem]"/>
+                    </span>
+                </button>
+
+           ): (
+
+            <div className="dropdown dropdown-hover  dropdown-bottom dropdown-end">
+            <div tabIndex={0} role="button" className="px-3 py-2 rounded-md m-1 items-center flex bg-transparent hover:bg-gray-50">
+                <User className="h-5 w-5 mr-1"/>
+                <ChevronDown className="w-4 h-4"/>
+            </div>
+            <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-md z-[1] w-fit p-1 shadow font-semibold">
+              <li onClick={getUserInfo}>
+                <a>{userInfo ?  userInfo.name : "Profile"}</a>
+              </li>
+              <li>
+                <Link href={'/settings'}>
+                   Settings
+                </Link>
+              </li>
+              <li onClick={logout}>
+                <a>
+                Logout
+                </a>
+              </li>
+            </ul>
+             </div>
+           )}
+
+          </div>    
          </div>
     </header>
   )
