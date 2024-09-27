@@ -1,5 +1,5 @@
 "use server"
-import { Users,Notifications, Transactions} from "../models/schema"
+import { Users,Notifications, Transactions, Reports,Rewards} from "../models/schema"
 import connectDB from "./dbConfig";
 
 
@@ -110,3 +110,89 @@ export async function  markNotificationAsRead(notificationId: string | number){
         return null
     }
 }
+
+
+export async function createReport(userId:number,location:string,wasteType:string,
+    amount:string,imageUrl:string,verificationResult?:any){
+
+        try {
+            const report = await Reports.create({
+                user_id: userId,
+                location,
+                wasteType,
+                amount,
+                imageUrl,
+                verification_result: verificationResult,
+                status: 'pending',
+            })
+            
+            const pointsEarned=10;
+              await updateRewardPoints(userId, pointsEarned)
+              await createTransactions(userId , 'earned_report', pointsEarned,'Points earned for reporting waste')
+              await createNotification(userId, `You've earned ${pointsEarned} points for reporting waste!`,'reward')
+
+            return report;
+        } catch (error) {
+            console.error("Error creating report",error)
+            return null;
+            
+        }
+}
+
+
+export async function updateRewardPoints(userId:number,PointsToAdd:number){
+     try {
+
+        const updatedReward = await Rewards.findOneAndUpdate(
+            { userId }, 
+            { $inc: { points: PointsToAdd } } ,
+            { new: true } 
+        );
+
+        return updatedReward;
+        
+     } catch (error) {
+        console.error("Error updating reward points",error);
+        return null;
+     }
+
+    };
+
+
+    export async function createTransactions(userId:number,type: 'earned_report' | 'earned_collect' | 'redeemed',
+        amount: number,description:string ){
+         
+            try {
+
+                const transaction= await Transactions.create({
+                    userId,
+                    type,
+                    amount,
+                    description
+                })
+
+                return transaction;
+                
+            } catch (error) {
+                console.error('Error creating transactions',error)
+                throw error;
+            }
+    };
+
+
+    export async function createNotification(userId:number,message:string,type:string){
+        try {
+          
+            const notification=await Notifications.create({
+                userId,
+                message,
+                type
+            });
+
+            return notification;
+            
+        } catch (error) {
+            console.error('Error creating Notifications..',error)
+            throw error;
+        }
+    }

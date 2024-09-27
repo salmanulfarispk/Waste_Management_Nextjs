@@ -8,6 +8,7 @@ import { StandaloneSearchBox, useJsApiLoader } from "@react-google-maps/api";
 import { Libraries } from "@react-google-maps/api";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+import { createReport, getUserByEmail } from "@/lib/actions";
 
 
 
@@ -19,7 +20,7 @@ const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY as any;
 const libraries: Libraries = ["places"];
 
 export default function ReportPage() {
-  const [user, setUser] = useState("");
+  const [user, setUser] = useState("") as any;
   const router = useRouter();
 
   const [reports, setReports] = useState<
@@ -39,7 +40,7 @@ export default function ReportPage() {
   });
 
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null) as any;
 
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "verifying" | "success" | "failure"
@@ -129,7 +130,7 @@ export default function ReportPage() {
                         MimeType: file.type,
                     },
                 },
-            ];
+            ] as any;
              
       
             
@@ -184,8 +185,59 @@ export default function ReportPage() {
        }
 
        setIsSubmitting(true)
-    }
+
+       try {
+        const report =await createReport(user._id, 
+          newReports.location,
+          newReports.type,
+          newReports.amount,
+           preview || undefined,
+           verificationResult ? JSON.stringify(verificationResult) : undefined
+          ) as any;
 
 
-  return <></>;
+           const formattedReport ={
+             _id: report._id,
+             location: report.location,
+             wasteType: report.wasteType,
+             amount: report.amount,
+             createdAt: report.createdAt.toISOString().split('T')[0],
+           } as any;
+
+           setReports([formattedReport, ...reports])
+           setNewReports({location:"",type:"",amount:""});
+           setFile(null)
+           setPreview(null)
+           setVerificationStatus('idle')
+           setVerificationResults(null)
+
+
+           toast.success(`Report Submitted succesfully! You've earned points for reporting waste`)
+
+       } catch (error) {
+         console.error("Error submitting report",error)
+         toast.error('Failed to submit repor. Please try again.')
+       }finally{
+        setIsSubmitting(false)
+       }
+
+    };
+
+
+     
+     useEffect(()=>{
+        const checkEmail= async()=>{
+          const email=localStorage.getItem("userEmail")
+          if(email){
+            let user= await getUserByEmail(email);
+            setUser(user)
+
+            const recentReports= await getRecentReports()
+          }
+        }
+     },[])
+
+
+  return <>
+  </>;
 }
