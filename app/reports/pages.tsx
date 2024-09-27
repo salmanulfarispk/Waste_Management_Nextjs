@@ -8,7 +8,7 @@ import { StandaloneSearchBox, useJsApiLoader } from "@react-google-maps/api";
 import { Libraries } from "@react-google-maps/api";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
-import { createReport, getUserByEmail } from "@/lib/actions";
+import { createReport, getRecentReports, getUserByEmail } from "@/lib/actions";
 
 
 
@@ -226,18 +226,36 @@ export default function ReportPage() {
 
      
      useEffect(()=>{
-        const checkEmail= async()=>{
+        const checkUser= async()=>{
           const email=localStorage.getItem("userEmail")
           if(email){
             let user= await getUserByEmail(email);
             setUser(user)
 
-            const recentReports= await getRecentReports()
+            const recentReports= await getRecentReports() as any
+            const formattedReports = recentReports.map((report: any) => ({ 
+              ...report,
+              createdAt: report.createdAt.toISOString().split("T")[0] 
+            }));
+            
+            setReports(formattedReports);
+          }else{
+             router.push("/")
           }
-        }
-     },[])
+        };
+
+         checkUser();
 
 
-  return <>
-  </>;
+
+     },[router])
+
+     
+
+  return (
+
+    <div>
+
+    </div>
+  )
 }

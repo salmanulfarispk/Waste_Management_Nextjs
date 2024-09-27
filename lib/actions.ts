@@ -195,4 +195,19 @@ export async function updateRewardPoints(userId:number,PointsToAdd:number){
             console.error('Error creating Notifications..',error)
             throw error;
         }
+    };
+
+
+
+    export async function getRecentReports(limit:number=10){
+        try {
+            const reports = await Reports.find({})
+              .sort({ createdAt: -1 })
+              .limit(limit); 
+            return reports;
+
+          } catch (error) {
+            console.error("Error fetching recent reports:", error);
+            return [];
+          }
     }
