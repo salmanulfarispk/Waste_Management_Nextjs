@@ -30,7 +30,7 @@ const privateKeyProvider= new EthereumPrivateKeyProvider({
 })
 
 const web3Auth= new Web3Auth({
-    clientId:process.env.WEB3_AUTH_CLIENT_ID as string,
+    clientId:process.env.WEB3_AUTH_CLIENT_ID as any,
     web3AuthNetwork: WEB3AUTH_NETWORK.TESTNET,
     privateKeyProvider
 })
@@ -247,7 +247,7 @@ const isMobile= useMediaQuery("(max-width: 768px)");
              )}
 
           <div className="flex items-center">
-                {isMobile && (
+                { isMobile && (
                   <button className="btn mr-2">
                     <Search className="h-5 w-5" />
                  </button>
