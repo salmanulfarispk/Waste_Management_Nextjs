@@ -8,8 +8,8 @@ import { createReport, getRecentReports, getUserByEmail } from "@/lib/actions";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import { Icon } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import imageCompression from 'browser-image-compression';
 import axios from "axios";
+import { uploadToFirebase } from "../../utils/firebase"
 
 
 const markerIcon = new Icon({
@@ -99,26 +99,17 @@ export default function ReportPage() {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
-
+  
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreview(e.target?.result as string);
       };
-
+  
       reader.readAsDataURL(selectedFile);
     }
   };
 
-  const readFileAsBase64 = (file: File): Promise<string> => {
-    // binary-to-text encoding
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
+  
   const handleVerify = async () => {
     if (!file) return;
 
@@ -126,25 +117,17 @@ export default function ReportPage() {
 
     try {
 
-      const options = {
-        maxSizeMB: 3,
-        maxWidthOrHeight: 500,
-        useWebWorker: true,
-      };
+      
   
-      const compressedFile = await imageCompression(file, options);
-      const base64Data = await readFileAsBase64(compressedFile);
-       
-      console.log("Base64 Data Length:", base64Data.length);
-      
-      
+      const imageUrl = await uploadToFirebase(file); 
+
       const payload = {
-        inputs: base64Data.split(",")[1],
+        inputs: imageUrl, 
         options: { wait_for_model: true },
       };
 
       const response = await axios.post(
-        "https://api-inference.huggingface.co/models/XYZ123XYZ/waste-classification",
+        "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection",
         payload,
         {
           headers: {
@@ -156,23 +139,29 @@ export default function ReportPage() {
 
       const parsedResult = response.data;
 
-      console.log("data", parsedResult);
-
       try {
-        if (
-          parsedResult.wasteType &&
-          parsedResult.quantity &&
-          parsedResult.confidence
-        ) {
-          setVerificationResults(parsedResult);
-          setVerificationStatus("success");
-          setNewReports({
-            ...newReports,
-            type: parsedResult.wasteType,
-            amount: parsedResult.quantity,
-          });
+        if (parsedResult.length > 0) {
+          const firstResult = parsedResult[0]; 
+          if (
+            firstResult.label &&
+            firstResult.score != null 
+          ) {
+            
+            const scoreAsString = Math.max(firstResult.score * 12, 0).toString();
+            
+            setVerificationResults(firstResult);
+            setVerificationStatus("success");
+            setNewReports({
+              ...newReports,
+              type: firstResult.label,
+              amount: scoreAsString, 
+            });
+          } else {
+            console.error("Invalid verification results", firstResult);
+            setVerificationStatus("failure");
+          }
         } else {
-          console.error("Invalid varification results", parsedResult);
+          console.error("No results found in verification response");
           setVerificationStatus("failure");
         }
       } catch (error) {
@@ -180,7 +169,7 @@ export default function ReportPage() {
         setVerificationStatus("failure");
       }
     } catch (error) {
-      console.error("Error  verifying waste:", error);
+      console.error("Error verifying waste:", error);
       setVerificationStatus("failure");
     }
   };
