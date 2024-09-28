@@ -1,18 +1,18 @@
-"use server"
+'use server'
 import { Users,Notifications, Transactions, Reports,Rewards} from "../models/schema"
-import connectDB from "./dbConfig";
+import dbConnect from "./dbConfig";
 
 
-export const createUser= async(email:string,name:string): Promise<any | null>=>{
+export const createUser= async(email:string,name:string): Promise<{ email: string; name: string } | null>=>{
 
     try {
-        await connectDB();
+         await dbConnect();
         const  user=await Users.create({
             email,
             name
         });
-         
-        return user;
+        
+        return { email: user.email, name: user.name };
         
     } catch (error) {
         console.error("Error creating user",error)
@@ -26,8 +26,8 @@ export const createUser= async(email:string,name:string): Promise<any | null>=>{
 export const getUserByEmail=async(email: string): Promise<any | null>=>{
     try {
         
-        await connectDB();
-        const user=await Users.findOne({email})
+        await dbConnect();
+        const user=await Users.findOne({email}).lean(); 
          return user;
     } catch (error) {
         console.error("Error fetching user by email",error);
@@ -38,31 +38,32 @@ export const getUserByEmail=async(email: string): Promise<any | null>=>{
 
 export async function getUnreadNotifications(userId: string | number){
     try {
-        
-        await connectDB();
-         return await Notifications.find({
+        await dbConnect();
+        const notifications = await Notifications.find({
             userId,
-            isRead: false
-        });
-        
+            isRead: false,
+        })
+        .select('_id type message')
+        .lean(); 
+
+        return notifications; 
     } catch (error) {
-        console.error("Error fetching unraed notifications",error);
-        return null
+        console.error("Error fetching unread notifications", error);
+        return []; 
     }
 }
 
 export async function getUserBalance(userId: string | number): Promise<number>{
     try {
-
-        await connectDB();
+        await dbConnect();
         const transactions = await getRewardTransactions(userId) || []; 
-        if(!transactions) return 0;
-         const balance= transactions?.reduce((acc:number, transaction:any)=> {
+        if (!transactions) return 0;
+        
+        const balance = transactions.reduce((acc: number, transaction: any) => {
             return transaction.type.startsWith('earned') ? acc + transaction.amount : acc - transaction.amount;
-         },0)
+        }, 0);
 
-         return Math.max(balance,0)
-
+        return Math.max(balance, 0);
     } catch (error) {
         console.error("Error calculating user balance:", error);
         return 0;
@@ -100,7 +101,7 @@ export async function getRewardTransactions(userId: string | number){
 export async function  markNotificationAsRead(notificationId: string | number){
     try {
 
-        await connectDB();
+        await dbConnect();
         await Notifications.updateOne({ _id: notificationId},{
            $set : {isRead:true }
         });
@@ -116,6 +117,7 @@ export async function createReport(userId:number,location:string,wasteType:strin
     amount:string,imageUrl:string,verificationResult?:any){
 
         try {
+            await dbConnect();
             const report = await Reports.create({
                 user_id: userId,
                 location,
@@ -202,12 +204,12 @@ export async function updateRewardPoints(userId:number,PointsToAdd:number){
     export async function getRecentReports(limit:number=10){
         try {
             const reports = await Reports.find({})
-              .sort({ createdAt: -1 })
-              .limit(limit); 
+                .sort({ createdAt: -1 })
+                .limit(limit)
+                .lean(); 
             return reports;
-
-          } catch (error) {
+        } catch (error) {
             console.error("Error fetching recent reports:", error);
             return [];
-          }
+        }
     }

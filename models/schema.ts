@@ -18,7 +18,7 @@ const UserSchema = new Schema({
     timestamps: true,
 });
 
-const Users = model('user', UserSchema);
+const Users = mongoose.models.user || model('user', UserSchema);
 
 // Report Schema
 const reportSchema = new Schema({
@@ -60,7 +60,7 @@ const reportSchema = new Schema({
     timestamps: true,
 });
 
-const Reports =  model('report', reportSchema);
+const Reports = mongoose.models.report || model('report', reportSchema);
 
 
 //Reward Schema
@@ -96,7 +96,7 @@ const rewardSchema = new Schema({
     timestamps: true
 });
 
-const Rewards = model('reward', rewardSchema);
+const Rewards = mongoose.models.reward || model('reward', rewardSchema);
 
 
 //ColectedWaste Schema
@@ -129,7 +129,7 @@ const CollectedWasteSchema = new Schema({
     timestamps: true
 });
 
-const CollectedWastes = model('collectedWaste', CollectedWasteSchema);
+const CollectedWastes = mongoose.models.collectedWaste || model('collectedWaste', CollectedWasteSchema);
 
 
 //notifiaction schema
@@ -158,7 +158,7 @@ const notificationSchema = new Schema({
 });
 
 
-const Notifications = model('notification', notificationSchema);
+const Notifications = mongoose.models.notification || model('notification', notificationSchema);
 
 
 const transactionSchema = new Schema({
@@ -187,7 +187,7 @@ const transactionSchema = new Schema({
     }
 });
 
-const Transactions = model('transaction', transactionSchema);
+const Transactions = mongoose.models.transaction || model('transaction', transactionSchema);
 
 
 

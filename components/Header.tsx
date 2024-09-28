@@ -46,98 +46,108 @@ const Header = ({ onMenuClick, totalEarnings }: HeaderProps) => {
 const [provider,setProvider]=useState<IProvider | null>(null)
 const [loggedIn,setLoggedIn]=useState(false)
 const [loading,setLoading]=useState(true)
-const [userInfo,setUserInfo]=useState<any>(null)
+const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
 const pathname=usePathname()
 const [notification,setNotification]=useState<Notification[]>([])
 const [balace,setBalance]=useState(0)
 
 const isMobile= useMediaQuery("(max-width: 768px)");
 
-   useEffect(()=>{
-      const init= async()=>{
-        try {
-            await web3Auth.initModal();
-            setProvider(web3Auth.provider)
+useEffect(() => {
+  const init = async () => {
+    try {
+      await web3Auth.initModal();
+      setProvider(web3Auth.provider);
 
-            if(web3Auth.connected){
-                setLoggedIn(true)
-                const user= await web3Auth.getUserInfo()
-                setUserInfo(user)
+      if (web3Auth.connected) {
+        setLoggedIn(true);
+        const user = await web3Auth.getUserInfo();
 
-                if(user.email){
-                    localStorage.setItem('userEmail',user.email)
-                    try {
-                    await createUser(user.email,user.name || "Anonymous user")
-                    } catch (error) {
-                        console.error("Error in creating user",error);
-                        
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error in initializing  web3auth",error);
-            
-        }finally{
-            setLoading(false)
-        }
-      };
-
-        init()
-   },[])
-
-
-      useEffect(()=>{
-        const fetchNotifications= async()=> {
+        setUserInfo({ email: user.email, name: user.name || "Anonymous User" });
+    
+        if (user.email) {
+            localStorage.setItem("userEmail", user.email);
             try {
-                if(userInfo && userInfo.email){
-                    const user= await getUserByEmail(userInfo.email)
-                    if(user){
-                        const unreadNotifications= await getUnreadNotifications(user._id)
-                        setNotification(unreadNotifications) 
-                    }
+                const createdUser = await createUser(user.email, user.name || "Anonymous User");
+                if (createdUser) {
+                    console.log('User created successfully:', createdUser);
                 }
             } catch (error) {
-            console.error("Error in fetching notifications",error);
+                console.error("Error in creating user", error);
             }
         }
+    }
+    
+    } catch (error) {
+      console.error("Error in initializing web3auth", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-          fetchNotifications();
-
-          const notificationInterval= setInterval(fetchNotifications,30000)
-          return ()=> clearInterval(notificationInterval)
-          
-      },[userInfo]);
+  init();
+ }, []);
 
 
-
-        useEffect(()=>{
-          const fetchUserBalance= async()=>{
-            try {
-                if(userInfo && userInfo){
-                    const user=await getUserByEmail(userInfo.email)
-                    if(user){
-                        const userBalance= await getUserBalance(user._id)
-                        setBalance(userBalance)
-                    }
+ useEffect(() => {
+  const fetchNotifications = async () => {
+    try {
+        if (userInfo && userInfo.email) {
+            const user = await getUserByEmail(userInfo.email);
+            if (user) {
+                const unreadNotifications = await getUnreadNotifications(user._id);
+                if (Array.isArray(unreadNotifications)) {
+                    setNotification(unreadNotifications); 
+                } else {
+                    console.error("No unread notifications found or error occurred");
                 }
-            } catch (error) {
-            console.error("Error in fetching balance",error);
+            } else {
+                console.error("User not found");
             }
+        }
+    } catch (error) {
+        console.error("Error in fetching notifications", error);
+    }
+};
+
+  fetchNotifications();
+
+  const notificationInterval = setInterval(fetchNotifications, 30000);
+  return () => clearInterval(notificationInterval);
+
+}, [userInfo]);
+
+
+useEffect(() => {
+  const fetchUserBalance = async () => {
+      try {
+          if (userInfo && userInfo.email) {
+              const user = await getUserByEmail(userInfo.email);
+              
+              
+              if (user) {
+                  const plainUser = JSON.parse(JSON.stringify(user)); 
+                  const userBalance = await getUserBalance(plainUser._id);
+                  setBalance(userBalance);
+              }
           }
+      } catch (error) {
+          console.error("Error in fetching balance", error);
+      }
+  };
 
-            fetchUserBalance();
+  fetchUserBalance();
 
-            const handleBalanceUpdate= (event: CustomEvent)=>{
-               setBalance(event.detail)
-            }
+  const handleBalanceUpdate = (event: CustomEvent) => {
+      setBalance(event.detail);
+  };
 
-             window.addEventListener('balanceUpdate',handleBalanceUpdate  as EventListener)
+  window.addEventListener('balanceUpdate', handleBalanceUpdate as EventListener);
 
-             return ()=>{
-             window.removeEventListener('balanceUpdate',handleBalanceUpdate  as EventListener)   
-             }
-
-        },[userInfo])
+  return () => {
+      window.removeEventListener('balanceUpdate', handleBalanceUpdate as EventListener);
+  };
+}, [userInfo]);
 
 
 

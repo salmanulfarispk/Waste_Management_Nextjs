@@ -9,7 +9,7 @@ const sidebarItems = [
     icon: Home,
   },
   {
-    href: "/reports",
+    href: "/report",
     label: "Report Waste",
     icon: MapPin,
   },
@@ -19,7 +19,7 @@ const sidebarItems = [
     icon: Trash,
   },
   {
-    href: "/rewards",
+    href: "/reward",
     label: "Rewards",
     icon: Coins,
   },
