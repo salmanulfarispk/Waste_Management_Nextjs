@@ -1,4 +1,5 @@
 'use server'
+import mongoose from "mongoose";
 import { Users,Notifications, Transactions, Reports,Rewards} from "../models/schema"
 import dbConnect from "./dbConfig";
 
@@ -264,7 +265,46 @@ export async function updateRewardPoints(userId:number,PointsToAdd:number){
 
 
 
+export async function getWasteCollectionTask(limit:number = 20){
+    try {
+         
+        const tasks = await Reports.find({})
+            .select('user_id location wasteType amount status collectorId createdAt') 
+            .limit(limit)
+            .exec(); 
 
+        return tasks.map((task:any)=> ({
+            ...task,
+            createdAt: task.createdAt.toISOString().split('T')[0]
+        }))
+    } catch (error) {
+        console.error("Error fetching waste collection tasks:", error);
+        return []; 
+    }
+}
+
+export async function updateTaskStatus(reportId: string, newStatus: string, collectorId?: string) {
+    try {
+      
+      const updateData: any = { status: newStatus };
+      
+      if (collectorId) {
+        updateData.collectorId = new mongoose.Types.ObjectId(collectorId); 
+      }
+  
+     
+      const updatedReport = await Reports.findByIdAndUpdate(
+        reportId,       
+        { $set: updateData }, 
+        { new: true }     
+      );
+  
+      return updatedReport;
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      throw error;
+    }
+  }
 
 
 
