@@ -117,8 +117,6 @@ export default function ReportPage() {
 
     try {
 
-      
-  
       const imageUrl = await uploadToFirebase(file); 
 
       const payload = {
@@ -196,7 +194,7 @@ export default function ReportPage() {
     try {
       const report = (await createReport(
         user._id,
-        newReports.location.split(' ').slice(0, 15).join(' '),
+        newReports.location,
         newReports.type,
         newReports.amount,
         preview || undefined,

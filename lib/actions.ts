@@ -1,6 +1,6 @@
 'use server'
 import mongoose from "mongoose";
-import { Users,Notifications, Transactions, Reports,Rewards} from "../models/schema"
+import { Users,Notifications, Transactions, Reports,Rewards, CollectedWastes} from "../models/schema"
 import dbConnect from "./dbConfig";
 
 
@@ -118,7 +118,7 @@ export async function  markNotificationAsRead(notificationId: string | number){
 }
 
 
-export async function createReport(userId:number,location:string,wasteType:string,
+export async function createReport(userId:string,location:string,wasteType:string,
     amount:string,imageUrl:string,verificationResult?:any){
 
         try {
@@ -150,7 +150,7 @@ export async function createReport(userId:number,location:string,wasteType:strin
 }
 
 
-export async function updateRewardPoints(userId:number,PointsToAdd:number){
+export async function updateRewardPoints(userId:string,PointsToAdd:number){
      try {
 
         const updatedReward = await Rewards.findOneAndUpdate(
@@ -169,7 +169,7 @@ export async function updateRewardPoints(userId:number,PointsToAdd:number){
     };
 
 
-    export async function createTransactions(userId:number,type: 'earned_report' | 'earned_collect' | 'redeemed',
+    export async function createTransactions(userId:string,type: 'earned_report' | 'earned_collect' | 'redeemed',
         amount: number,description:string ){
          
             try {
@@ -190,7 +190,7 @@ export async function updateRewardPoints(userId:number,PointsToAdd:number){
     };
 
 
-    export async function createNotification(userId:number,message:string,type:string){
+    export async function createNotification(userId:string,message:string,type:string){
         try {
           
             const notification=await Notifications.create({
@@ -287,7 +287,7 @@ export async function updateTaskStatus(reportId: string, newStatus: string, coll
     try {
       
       const updateData: any = { status: newStatus };
-      
+
       if (collectorId) {
         updateData.collectorId = new mongoose.Types.ObjectId(collectorId); 
       }
@@ -338,3 +338,48 @@ export async function getOrCreateReward(userId:string) {
    
   }
 }
+
+
+export async function saveReward(userId:string, amount:number) {
+    try {
+   
+      const reward = await Rewards.create({
+        userId,
+        name: 'Waste Collection Reward',
+        collectionInfo: 'Points earned from waste collection',
+        points: amount,
+        level: 1,
+        isAvailable: true,
+      });
+  
+      
+      await createTransactions(userId, 'earned_collect', amount, 'Points earned for collecting waste');
+  
+      return reward;
+
+    } catch (error) {
+      console.error("Error saving reward:", error);
+      throw error;
+    }
+  }
+
+
+
+
+
+
+export async function saveCollectionWaste(reportId:string, collectorId:string,) {
+    try {
+      const collectedWaste = await CollectedWastes.create({
+        reportId,
+        collectorId,
+        collectionDate: new Date(),
+        status: 'verified',
+      });
+  
+      return collectedWaste;
+    } catch (error) {
+      console.error("Error saving collected waste:", error);
+      throw error;
+    }
+  }

@@ -90,6 +90,11 @@ const rewardSchema = new Schema({
     collectionInfo: {
         type: String,
         required: true
+    },
+    level: {
+        type: Number,  
+        default: 1,    
+        required: true
     }
 }, {
     timestamps: true
