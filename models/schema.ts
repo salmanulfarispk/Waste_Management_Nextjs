@@ -44,7 +44,6 @@ const reportSchema = new Schema({
     },
     verification_result: {
         type: mongoose.Schema.Types.Mixed,      // Use Mixed for JSON-like data
-        required: true,
     },
     status: {
         type: String,
@@ -54,7 +53,7 @@ const reportSchema = new Schema({
     collectorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'user',
-        required: true,
+        required: false
     }
 }, {
     timestamps: true,

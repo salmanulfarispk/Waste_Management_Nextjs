@@ -57,10 +57,14 @@ export async function getUserBalance(userId: string | number): Promise<number>{
     try {
         await dbConnect();
         const transactions = await getRewardTransactions(userId) || []; 
-        if (!transactions) return 0;
-        
+
+        if (transactions.length === 0) return 0;
+
         const balance = transactions.reduce((acc: number, transaction: any) => {
-            return transaction.type.startsWith('earned') ? acc + transaction.amount : acc - transaction.amount;
+            if (transaction && transaction.type) {
+                return transaction.type.startsWith('earned') ? acc + transaction.amount : acc - transaction.amount;
+            }
+            return acc; 
         }, 0);
 
         return Math.max(balance, 0);
@@ -127,18 +131,21 @@ export async function createReport(userId:number,location:string,wasteType:strin
                 verification_result: verificationResult,
                 status: 'pending',
             })
+
+            const plainReport = report.toObject();
             
             const pointsEarned=10;
               await updateRewardPoints(userId, pointsEarned)
               await createTransactions(userId , 'earned_report', pointsEarned,'Points earned for reporting waste')
               await createNotification(userId, `You've earned ${pointsEarned} points for reporting waste!`,'reward')
 
-            return report;
+            return plainReport;
         } catch (error) {
             console.error("Error creating report",error)
             return null;
             
         }
+
 }
 
 
@@ -213,3 +220,81 @@ export async function updateRewardPoints(userId:number,PointsToAdd:number){
             return [];
         }
     }
+
+
+    export async function getAvailableRewards(userId: string){
+        
+        try {
+            const userTransactions = await getRewardTransactions(userId);
+            if (!userTransactions || userTransactions.length === 0) {
+                return []; 
+            }
+    
+            const userPoints = userTransactions.reduce((total: number, transaction: any) => {
+                if (transaction.type && typeof transaction.type === 'string') {
+                    return transaction.type.startsWith('earned') ? total + transaction.amount : total - transaction.amount;
+                }
+                return total; 
+            }, 0);
+               
+            const availableRewards = await Rewards.find({
+                isAvailable: true,
+                points: { $lte: userPoints }
+            }).select('_id name points description collectionInfo');
+    
+            const allRewards = [
+                {
+                    _id: 'your-points-id',
+                    name: "Your points",
+                    points: userPoints,
+                    description: "Redeem your earned points",
+                    collectionInfo: "Points earned from reporting and collecting waste"
+                },
+                ...availableRewards
+            ];
+    
+            return allRewards;
+    
+        } catch (error) {
+            console.error("Error fetching available rewards:", error);
+            return [];
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+export async function getOrCreateReward(userId:string) {
+    try {
+ 
+       await dbConnect();
+      const reward = await Rewards.findOne({ userId });
+  
+      if (reward) {
+        return reward; 
+      } else {
+        const newReward = {
+          userId,
+          name: 'Default Reward',
+          collectionInfo: 'Default Collection Info',
+          points: 0,
+          level: 1,
+          isAvailable: true,
+        };
+  
+        const result = await Rewards.create(newReward);
+        return { ...newReward, _id: result.insertedId }; 
+      }
+    } catch (error) {
+      console.error("Error getting or creating reward:", error);
+      return null;
+   
+  }
+}

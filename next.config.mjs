@@ -2,6 +2,9 @@
 const nextConfig = {
     experimental: {
         instrumentationHook: true,
+        serverActions: {
+            bodySizeLimit: '10mb', 
+        },
     },
     env:{
         MONGODB_URI: process.env.MONGODB_URI,

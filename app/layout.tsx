@@ -7,6 +7,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast"
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
+import { getAvailableRewards, getUserByEmail } from "@/lib/actions";
 
 
 
@@ -22,8 +23,28 @@ export default function RootLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [totalEarnings, setTotalEarnings] = useState(0)
 
-  useEffect(() => {
 
+
+  useEffect(() => {
+    
+    const fetchTotalEarnings =async()=>{
+      try {
+        const userEmail = localStorage.getItem("userEmail")
+        if(userEmail){
+          const user= await getUserByEmail(userEmail)
+          if(user){
+            const availableRewards = await getAvailableRewards(user._id) as any;
+            console.log(availableRewards);
+            
+            setTotalEarnings(availableRewards)
+          }
+        }
+      } catch (error) {
+        console.error("Error  fetching total earnings",error)
+      }
+    };
+
+    fetchTotalEarnings();
   }, [])
 
   return (

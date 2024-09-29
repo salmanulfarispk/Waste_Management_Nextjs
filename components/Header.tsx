@@ -1,5 +1,5 @@
-//@ts-nocheck
 "use client"
+
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -42,17 +42,17 @@ interface HeaderProps{
 }
 
 const Header = ({ onMenuClick, totalEarnings }: HeaderProps) => {
-
+ 
+  
 const [provider,setProvider]=useState<IProvider | null>(null)
 const [loggedIn,setLoggedIn]=useState(false)
 const [loading,setLoading]=useState(true)
 const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
 const pathname=usePathname()
 const [notification,setNotification]=useState<Notification[]>([])
-const [balace,setBalance]=useState(0)
+const [balance,setBalance]=useState(0)
 
 const isMobile= useMediaQuery("(max-width: 768px)");
-
 useEffect(() => {
   const init = async () => {
     try {
@@ -63,21 +63,28 @@ useEffect(() => {
         setLoggedIn(true);
         const user = await web3Auth.getUserInfo();
 
-        setUserInfo({ email: user.email, name: user.name || "Anonymous User" });
-    
+        setUserInfo({
+          email: user.email as string,
+          name: user.name || "Anonymous User",
+        });
+
+
         if (user.email) {
-            localStorage.setItem("userEmail", user.email);
-            try {
-                const createdUser = await createUser(user.email, user.name || "Anonymous User");
-                if (createdUser) {
-                    console.log('User created successfully:', createdUser);
-                }
-            } catch (error) {
-                console.error("Error in creating user", error);
-            }
+          localStorage.setItem("userEmail", user.email);
+          try {
+            const createdUser = await createUser(user.email, user.name || "Anonymous User");
+            console.log("User created successfully:", createdUser);
+          } catch (error) {
+            console.error("Error in creating user", error);
+          }
         }
-    }
-    
+      } else {
+        localStorage.removeItem("Web3Auth-cachedAdapter");
+        localStorage.removeItem("userEmail");
+        localStorage.removeItem("auth_store");
+
+        setLoggedIn(false);
+      }
     } catch (error) {
       console.error("Error in initializing web3auth", error);
     } finally {
@@ -85,8 +92,8 @@ useEffect(() => {
     }
   };
 
-  init();
- }, []);
+  init(); 
+}, []); 
 
 
  useEffect(() => {
@@ -95,7 +102,7 @@ useEffect(() => {
         if (userInfo && userInfo.email) {
             const user = await getUserByEmail(userInfo.email);
             if (user) {
-                const unreadNotifications = await getUnreadNotifications(user._id);
+                const unreadNotifications = await getUnreadNotifications(user._id) as any;
                 if (Array.isArray(unreadNotifications)) {
                     setNotification(unreadNotifications); 
                 } else {
@@ -163,7 +170,10 @@ useEffect(() => {
              setLoggedIn(true)
 
              const user=await web3Auth.getUserInfo();
-             setUserInfo(user);
+             setUserInfo({
+              email: user.email as string,
+              name: user.name as string
+            })
 
              if(user.email){
                 localStorage.setItem('userEmail', user.email);
@@ -190,9 +200,12 @@ useEffect(() => {
          try {
              await web3Auth.logout();
              setProvider(null)
+             localStorage.removeItem("userEmail")
+             localStorage.removeItem("Web3Auth-cachedAdapter");
+             localStorage.removeItem("auth_store");
              setLoggedIn(false)
              setUserInfo(null)
-             localStorage.removeItem("userEmail")
+
          } catch (error) {
             console.log("Error in  logged out ",error);
             
@@ -203,7 +216,10 @@ useEffect(() => {
       const getUserInfo= async()=>{
          if(web3Auth.connected){
             const user= await web3Auth.getUserInfo()
-            setUserInfo(user)
+            setUserInfo({
+              email: user.email as string,
+              name: user.name as string
+            })
 
             if(user.email){
                 localStorage.setItem('userEmail', user.email);
@@ -267,7 +283,7 @@ useEffect(() => {
     <summary className="btn mr-2 relative bg-transparent shadow-none border-none hover:bg-gray-100">
     <Bell className="h-5 w-5 text-gray-800"/>
           {notification.length > 0 &&(
-                 <div className="badge badge-secondary px-2 min-w-[1.2rem] h-5">
+                 <div className="badge badge-neutral px-2 min-w-[1.2rem] h-5">
                    {notification.length}
                  </div>
                  )}
@@ -278,7 +294,7 @@ useEffect(() => {
             notification.map((notific:any)=> (
               <div  key={notific._id}
                onClick={()=> handleNotificationClick(notific._id)}
-                className="flex flex-col"
+                className="flex flex-col p-3"
                >
                <span className="font-medium">{notific.type}</span>
                <span className="text-sm text-gray-500">{notific.message}</span>   
@@ -299,7 +315,7 @@ useEffect(() => {
          <div className="mr-2 md:mr-2 flex items-center bg-gray-100 rounded-full px-2 md:px-3 py-1">
             <Coins className="h-4 w-4 md:h-5 md:w-5 mr-1 text-green-500"/>
             <span className="font-semibold text-sm md:text-base text-gray-800">
-               {balace.toFixed(2)}
+              {balance.toFixed(2)}
             </span>
          </div>
 

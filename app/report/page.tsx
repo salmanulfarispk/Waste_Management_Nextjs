@@ -26,7 +26,7 @@ export default function ReportPage() {
 
   const [reports, setReports] = useState<
     Array<{
-      id: number;
+      _id: number;
       location: string;
       wasteType: string;
       amount: string;
@@ -127,7 +127,7 @@ export default function ReportPage() {
       };
 
       const response = await axios.post(
-        "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection",
+        "https://api-inference.huggingface.co/models/google/vit-base-patch16-224",
         payload,
         {
           headers: {
@@ -138,6 +138,7 @@ export default function ReportPage() {
       );
 
       const parsedResult = response.data;
+        
 
       try {
         if (parsedResult.length > 0) {
@@ -147,9 +148,16 @@ export default function ReportPage() {
             firstResult.score != null 
           ) {
             
-            const scoreAsString = Math.max(firstResult.score * 12, 0).toString();
+            const wasteTypes = parsedResult.map((item: { label: string }) => item.label);
+            const scoreAsString = Math.max(Math.ceil(firstResult.score * 15 * 2), 0).toString();
+            const percentage =   Math.max(Math.ceil(firstResult.score * 10 * 2), 0) * 5 /100 ;
             
-            setVerificationResults(firstResult);
+            
+            setVerificationResults({
+              wasteType:  wasteTypes,
+              quantity:   scoreAsString,
+              confidence: percentage,
+            });
             setVerificationStatus("success");
             setNewReports({
               ...newReports,
@@ -174,6 +182,8 @@ export default function ReportPage() {
     }
   };
 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (verificationStatus !== "success" || !user) {
@@ -186,7 +196,7 @@ export default function ReportPage() {
     try {
       const report = (await createReport(
         user._id,
-        newReports.location,
+        newReports.location.split(' ').slice(0, 15).join(' '),
         newReports.type,
         newReports.amount,
         preview || undefined,
@@ -240,6 +250,7 @@ export default function ReportPage() {
 
     checkUser();
   }, [router]);
+
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -301,8 +312,10 @@ export default function ReportPage() {
         >
           {verificationStatus === "verifying" ? (
             <>
-              <Loader className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+             <span className="flex items-center justify-center gap-2">
+              <Loader className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"  />
               Verifying...
+              </span>
             </>
           ) : (
             "Verify Waste"
@@ -319,7 +332,7 @@ export default function ReportPage() {
                 </h3>
                 <div className="mt-2 text-sm text-green-700">
                   <p>Waste Type: {verificationResult.wasteType}</p>
-                  <p>Quantity: {verificationResult.quantity}</p>
+                  <p>Quantity: Approximately {verificationResult.quantity} kg</p>
                   <p>
                     Confidence:{" "}
                     {(verificationResult.confidence * 100).toFixed(2)}%
@@ -455,12 +468,12 @@ export default function ReportPage() {
             <tbody className="divide-y divide-gray-200">
               {reports.map((report) => (
                 <tr
-                  key={report.id}
+                  key={report._id}
                   className="hover:bg-gray-50 transition-colors duration-200"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <MapPin className="inline-block w-4 h-4 mr-2 text-green-500" />
-                    {report.location}
+                    <MapPin className="inline-block w-4 h-4 mr-2 text-green-500 text-ellipsis" />
+                    {report.location.split(' ').slice(0, 15).join(' ')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {report.wasteType}
