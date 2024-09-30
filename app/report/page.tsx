@@ -10,6 +10,7 @@ import { Icon } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import axios from "axios";
 import { uploadToFirebase } from "../../utils/firebase"
+import imageCompression from 'browser-image-compression';
 
 
 const markerIcon = new Icon({
@@ -117,7 +118,16 @@ export default function ReportPage() {
 
     try {
 
-      const imageUrl = await uploadToFirebase(file); 
+     
+      const options = {
+        maxSizeMB: 1, 
+        maxWidthOrHeight: 1920, 
+        useWebWorker: true, 
+      };
+  
+      const compressedFile = await imageCompression(file, options);
+  
+      const imageUrl = await uploadToFirebase(compressedFile);
 
       const payload = {
         inputs: imageUrl, 

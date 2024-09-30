@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react";
+import imageCompression from 'browser-image-compression';
 import { Clock, Upload, Loader, Calendar, Weight, Search, MapPin, Trash2, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { getUserByEmail, getWasteCollectionTask, saveCollectionWaste, saveReward, updateTaskStatus } from "@/lib/actions";
@@ -82,12 +83,9 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
    const [reward, setReward] = useState<number | null>(null)
   const [file, setFile] = useState<File | null>(null);
     
-         
-
- console.log("verficationstatus",verificationStatus);
+        
  
    
-    
 
     const handleStatusChange =async(taskId:string, newStatus: collectionTask["status"])=>{
         if (!user) {
@@ -137,8 +135,17 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
         setVerificationStatus("verifying");
       
         try {
-      
-          const imageUrl = await uploadToFirebase(file);
+
+            const options = {
+                maxSizeMB: 1, 
+                maxWidthOrHeight: 1920, 
+                useWebWorker: true, 
+              };
+          
+              const compressedFile = await imageCompression(file, options);
+          
+              const imageUrl = await uploadToFirebase(compressedFile);
+              
           
           const payload = {
             inputs: imageUrl,
@@ -182,9 +189,9 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
 
               if (matchType && amountMatch && verifyperc >= 0.6) {
                 setVerificationStatus('success');
-      
+                setSelectedTask(null)
+                
                 await handleStatusChange(selectedTask._id, "verified");
-      
                 const earnedReward = Math.floor(Math.random() * 50) + 10;
                 await saveReward(user._id, earnedReward);
                 await saveCollectionWaste(selectedTask._id, user._id);

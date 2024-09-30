@@ -145,7 +145,7 @@ export async function createReport(userId:string,location:string,wasteType:strin
               await createNotification(userId, `You've earned ${pointsEarned} points for reporting waste!`,'reward')
 
             return plainReport;
-            
+
         } catch (error) {
             console.error("Error creating report",error)
             return null;
@@ -278,7 +278,8 @@ export async function getWasteCollectionTask(limit:number = 20){
             .limit(limit)
             .lean()
             .exec(); 
-
+        
+         
         return tasks.map((task:any)=> ({
             ...task,
             createdAt: task.createdAt.toISOString().split('T')[0]
