@@ -73,16 +73,14 @@ useEffect(() => {
           localStorage.setItem("userEmail", user.email);
           try {
             const createdUser = await createUser(user.email, user.name || "Anonymous User");
-            console.log("User created successfully:", createdUser);
+            
           } catch (error) {
             console.error("Error in creating user", error);
           }
         }
       } else {
-        localStorage.removeItem("Web3Auth-cachedAdapter");
+      
         localStorage.removeItem("userEmail");
-        localStorage.removeItem("auth_store");
-
         setLoggedIn(false);
       }
     } catch (error) {

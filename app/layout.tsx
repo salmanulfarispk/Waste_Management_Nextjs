@@ -34,7 +34,7 @@ export default function RootLayout({
           const user= await getUserByEmail(userEmail)
           if(user){
             const availableRewards = await getAvailableRewards(user._id) as any;
-            console.log(availableRewards);
+            // console.log(availableRewards);
             
             setTotalEarnings(availableRewards)
           }

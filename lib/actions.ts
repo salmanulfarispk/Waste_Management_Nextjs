@@ -8,6 +8,10 @@ export const createUser= async(email:string,name:string): Promise<{ email: strin
 
     try {
          await dbConnect();
+         const existingUser = await Users.findOne({ email });
+        if (existingUser) {
+            return { email: existingUser.email, name: existingUser.name };
+        }
         const  user=await Users.create({
             email,
             name
@@ -28,7 +32,7 @@ export const getUserByEmail=async(email: string): Promise<any | null>=>{
     try {
         
         await dbConnect();
-        const user=await Users.findOne({email}).lean(); 
+        const user=await Users.findOne({email}).lean()
          return user;
     } catch (error) {
         console.error("Error fetching user by email",error);
@@ -141,6 +145,7 @@ export async function createReport(userId:string,location:string,wasteType:strin
               await createNotification(userId, `You've earned ${pointsEarned} points for reporting waste!`,'reward')
 
             return plainReport;
+            
         } catch (error) {
             console.error("Error creating report",error)
             return null;
@@ -271,6 +276,7 @@ export async function getWasteCollectionTask(limit:number = 20){
         const tasks = await Reports.find({})
             .select('user_id location wasteType amount status collectorId createdAt') 
             .limit(limit)
+            .lean()
             .exec(); 
 
         return tasks.map((task:any)=> ({
@@ -282,6 +288,8 @@ export async function getWasteCollectionTask(limit:number = 20){
         return []; 
     }
 }
+
+
 
 export async function updateTaskStatus(reportId: string, newStatus: string, collectorId?: string) {
     try {
@@ -297,7 +305,7 @@ export async function updateTaskStatus(reportId: string, newStatus: string, coll
         reportId,       
         { $set: updateData }, 
         { new: true }     
-      );
+      ).lean(); 
   
       return updatedReport;
     } catch (error) {
@@ -342,7 +350,8 @@ export async function getOrCreateReward(userId:string) {
 
 export async function saveReward(userId:string, amount:number) {
     try {
-   
+       
+       await dbConnect();
       const reward = await Rewards.create({
         userId,
         name: 'Waste Collection Reward',
@@ -370,10 +379,12 @@ export async function saveReward(userId:string, amount:number) {
 
 export async function saveCollectionWaste(reportId:string, collectorId:string,) {
     try {
+       await dbConnect();
+
       const collectedWaste = await CollectedWastes.create({
         reportId,
         collectorId,
-        collectionDate: new Date(),
+        collectedDate: new Date(),
         status: 'verified',
       });
   
