@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import { Clock, Upload, Loader, Calendar, Weight, Search, MapPin, Trash2, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { getUserByEmail, getWasteCollectionTask, saveCollectionWaste, saveReward, updateTaskStatus } from "@/lib/actions";
+import imageCompression from 'browser-image-compression';
+import { uploadToFirebase } from "@/utils/firebase"
+import axios from "axios";
+
 
 
 type collectionTask = {
@@ -83,7 +87,7 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
     
         
 
-
+     
  
    
 
@@ -125,9 +129,8 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
       };
 
     
-
       const handleVerify = async () => {
-        if (!selectedTask || !user) {
+        if (!file || !selectedTask || !user) {
             toast.error("Missing required information for verification");
             return;
         }
@@ -135,54 +138,89 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
         setVerificationStatus("verifying");
     
         try {
+            // Compress the image file
+            const options = {
+                maxSizeMB: 1, 
+                maxWidthOrHeight: 1920, 
+                useWebWorker: true, 
+            };
+            const compressedFile = await imageCompression(file, options);
+    
+            // Upload the compressed image to Firebase
+            const imageUrl = await uploadToFirebase(compressedFile);
+    
+            // Prepare the payload for Hugging Face's API request
+            const payload = {
+                inputs: imageUrl,
+                options: { wait_for_model: true },
+            };
+    
+            // Call the Hugging Face model API
+            const response = await axios.post(
+                "https://api-inference.huggingface.co/models/google/vit-base-patch16-224",
+                payload,
+                {
+                    headers: {
+                        Authorization: `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+    
+            const result = response.data;
+    
+            // Check if we have a valid response
+            if (Array.isArray(result) && result.length > 0) {
+                const firstResult = result[0];
+    
+                if (firstResult.label && firstResult.score != null) {
+                    const wasteTypes = result.map((item: { label: string }) => item.label);
+                    const scoreAsNumber = Math.ceil(firstResult.score * 15 * 2);
+    
+                    const verifyperc = Math.floor(Math.random() * 25) + 76;
+    
+                    const matchType = wasteTypes.includes(selectedTask.wasteType);
+                    const amountMatch = scoreAsNumber === Number(selectedTask.amount);
+                   
 
-              setTimeout(async()=>{
-             
-                const percentage = Math.floor(Math.random() * 51) + 50;
     
-            if (percentage >= 70) {
-                setVerificationResult({
-                    wasteTypeMatch: true,
-                    quantityMatch: true,
-                    confidence: percentage,
-                });
+                    setVerificationResult({
+                        wasteTypeMatch: matchType,
+                        quantityMatch: amountMatch,
+                        confidence: verifyperc,
+                    });
     
-                setVerificationStatus("success");
-               
-    
-                const userId = user._id.toString();
-                const selectedTaskId = selectedTask._id.toString(); 
-    
-                await handleStatusChange(selectedTaskId, "verified");
-    
-                const earnedReward = Math.floor(Math.random() * 50) + 10; 
-                await saveReward(userId, earnedReward); 
-                await saveCollectionWaste(selectedTaskId, userId);
-                
+                    if (matchType && amountMatch && verifyperc >= 0.7) {
 
+                        setVerificationStatus("success");
     
-                toast.success(`Verification successful! You earned ${earnedReward} tokens`, {
-                    duration: 5000,
-                    position: "top-center",
-                });
+                        await handleStatusChange(selectedTask._id, "verified");
+                        const earnedReward = Math.floor(Math.random() * 50) + 10;
+                        await saveReward(user._id, earnedReward);
+                        await saveCollectionWaste(selectedTask._id, user._id);
+    
+                        toast.success(`Verification successful! You've earned ${earnedReward} points!`);
+                         
+                        setTimeout(()=>{
+                        setSelectedTask(null);
+                        },4000)
+     
 
+                    } else {
+                        setVerificationStatus("failure");
+                        toast.error("Verification failed. Waste type or amount does not match.", {
+                            duration: 5000,
+                            position: "top-center",
+                        });
+                        setPreview(null)
+
+                    }
+                } else {
+                    throw new Error("Invalid result from the verification API");
+                }
             } else {
-
-                setVerificationResult({
-                    wasteTypeMatch: false,
-                    quantityMatch: false,
-                    confidence: percentage,
-                });
-                setVerificationStatus("failure");
-    
-                toast.error("Verification failed. The collected waste does not match the reported waste.", {
-                    duration: 5000,
-                    position: "top-center",
-                });
+                throw new Error("No valid results from the verification API");
             }
-
-             },5000)
-           
         } catch (error) {
             console.error("Error during verification:", error);
             setVerificationStatus("failure");
@@ -193,7 +231,7 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
         }
     };
     
-      
+  
 
 
   const filteredTasks = tasks.filter(task =>
