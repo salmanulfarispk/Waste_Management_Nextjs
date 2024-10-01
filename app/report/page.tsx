@@ -216,8 +216,10 @@ export default function ReportPage() {
         location: report.location,
         wasteType: report.wasteType,
         amount: report.amount,
-        createdAt: report.createdAt.toISOString().split("T")[0],
+        createdAt: report.createdAt,
+        
       } as any;
+
 
       setReports([formattedReport, ...reports]);
       setNewReports({ location: "", type: "", amount: "" });

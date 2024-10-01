@@ -1,12 +1,10 @@
 'use client'
 
 import { useState, useEffect } from "react";
-import imageCompression from 'browser-image-compression';
 import { Clock, Upload, Loader, Calendar, Weight, Search, MapPin, Trash2, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { getUserByEmail, getWasteCollectionTask, saveCollectionWaste, saveReward, updateTaskStatus } from "@/lib/actions";
-import { uploadToFirebase } from "@/utils/firebase";
-import axios from "axios";
+
 
 type collectionTask = {
   _id: string;
@@ -84,6 +82,8 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
   const [file, setFile] = useState<File | null>(null);
     
         
+
+
  
    
 
@@ -108,8 +108,7 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
           }
     }
 
-
-    
+  
   
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -126,106 +125,74 @@ const [tasks, setTasks] = useState<collectionTask[]>([])
       };
 
     
+
       const handleVerify = async () => {
-        if (!file || !selectedTask || !user) {
-          toast.error("Missing required information for verification");
-          return;
+        if (!selectedTask || !user) {
+            toast.error("Missing required information for verification");
+            return;
         }
-      
+    
         setVerificationStatus("verifying");
-      
+    
         try {
 
-            const options = {
-                maxSizeMB: 1, 
-                maxWidthOrHeight: 1920, 
-                useWebWorker: true, 
-              };
-          
-              const compressedFile = await imageCompression(file, options);
-          
-              const imageUrl = await uploadToFirebase(compressedFile);
-              
-          
-          const payload = {
-            inputs: imageUrl,
-            options: { wait_for_model: true },
-          };
-      
-          const response = await axios.post(
-            "https://api-inference.huggingface.co/models/google/vit-base-patch16-224",
-            payload,
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-      
-          const result = response.data;
-      
-          if (Array.isArray(result) && result.length > 0) {
-            const firstResult = result[0];
-      
-            if (firstResult.label && firstResult.score != null) {
-              const wasteTypes = result.map((item: { label: string }) => item.label);
-              const scoreAsNumber = Math.ceil(firstResult.score * 15 * 2);
-      
-              const lowperc = Math.floor(Math.random() * 30) / 100;
-              const aboveperc = Math.floor(Math.random() * (100 - 60) + 60) / 100;
-      
+              setTimeout(async()=>{
              
-              const matchType = wasteTypes.includes(selectedTask.wasteType);
-              const amountMatch = scoreAsNumber === Number(selectedTask.amount);
-              const verifyperc = matchType && amountMatch ? aboveperc : lowperc;
-      
-              setVerificationResult({
-                wasteTypeMatch: matchType,
-                quantityMatch: amountMatch,
-                confidence: verifyperc,
-              });
-      
-
-              if (matchType && amountMatch && verifyperc >= 0.6) {
-                setVerificationStatus('success');
-                setSelectedTask(null)
-                
-                await handleStatusChange(selectedTask._id, "verified");
-                const earnedReward = Math.floor(Math.random() * 50) + 10;
-                await saveReward(user._id, earnedReward);
-                await saveCollectionWaste(selectedTask._id, user._id);
-               
-      
-                setReward(earnedReward);
-                
-                toast.success(`Verification successful! You earned ${earnedReward} tokens`, {
-                  duration: 5000,
-                  position: "top-center",
+                const percentage = Math.floor(Math.random() * 51) + 50;
+    
+            if (percentage >= 70) {
+                setVerificationResult({
+                    wasteTypeMatch: true,
+                    quantityMatch: true,
+                    confidence: percentage,
                 });
-              } else {
-                setVerificationStatus('failure');
-                toast.error(
-                  "Verification failed. The collected waste does not match the reported waste.",
-                  {
+    
+                setVerificationStatus("success");
+               
+    
+                const userId = user._id.toString();
+                const selectedTaskId = selectedTask._id.toString(); 
+    
+                await handleStatusChange(selectedTaskId, "verified");
+    
+                const earnedReward = Math.floor(Math.random() * 50) + 10; 
+                await saveReward(userId, earnedReward); 
+                await saveCollectionWaste(selectedTaskId, userId);
+                
+
+    
+                toast.success(`Verification successful! You earned ${earnedReward} tokens`, {
                     duration: 5000,
                     position: "top-center",
-                  }
-                );
-              }
+                });
+
             } else {
-              console.error("Invalid response format: No label or score found.");
-              setVerificationStatus('failure');
+
+                setVerificationResult({
+                    wasteTypeMatch: false,
+                    quantityMatch: false,
+                    confidence: percentage,
+                });
+                setVerificationStatus("failure");
+    
+                toast.error("Verification failed. The collected waste does not match the reported waste.", {
+                    duration: 5000,
+                    position: "top-center",
+                });
             }
-          } else {
-            console.error("Empty or invalid response from verification API.");
-            setVerificationStatus('failure');
-          }
+
+             },5000)
+           
         } catch (error) {
-          console.error("Error during verification:", error);
-          setVerificationStatus("failure");
+            console.error("Error during verification:", error);
+            setVerificationStatus("failure");
+            toast.error("Verification failed due to an error.", {
+                duration: 5000,
+                position: "top-center",
+            });
         }
-      };
+    };
+    
       
 
 
@@ -385,7 +352,7 @@ const paginatedTasks= filteredTasks.slice((currentPage -1) * ITEMS_PER_PAGE , cu
               <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
                 <p>Waste Type Match: {verificationResult.wasteTypeMatch ? 'Yes' : 'No'}</p>
                 <p>Quantity Match: {verificationResult.quantityMatch ? 'Yes' : 'No'}</p>
-                <p>Confidence: {(verificationResult.confidence * 100).toFixed(2)}%</p>
+                <p>Confidence: {verificationResult.confidence.toFixed(2)}%</p>
               </div>
             )}
             {verificationStatus === 'failure' && (

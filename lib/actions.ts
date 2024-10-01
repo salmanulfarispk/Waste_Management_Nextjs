@@ -4,6 +4,26 @@ import { Users,Notifications, Transactions, Reports,Rewards, CollectedWastes} fr
 import dbConnect from "./dbConfig";
 
 
+
+interface Notification {
+    _id: string | number; 
+    type: string;        
+    message: string;     
+}
+
+interface Report {
+    _id: string; 
+    user_id: string; 
+    location: string;
+    wasteType: string;
+    amount: string;
+    imageUrl?: string; 
+    verification_result?: any; 
+    status: string;
+    collectorId?: string;
+    createdAt?: Date; 
+}
+
 export const createUser= async(email:string,name:string): Promise<{ email: string; name: string } | null>=>{
 
     try {
@@ -33,7 +53,9 @@ export const getUserByEmail=async(email: string): Promise<any | null>=>{
         
         await dbConnect();
         const user=await Users.findOne({email}).lean()
-         return user;
+      return JSON.parse(JSON.stringify(user));
+    
+         
     } catch (error) {
         console.error("Error fetching user by email",error);
         return null;
@@ -41,7 +63,7 @@ export const getUserByEmail=async(email: string): Promise<any | null>=>{
 }
 
 
-export async function getUnreadNotifications(userId: string | number){
+export async function getUnreadNotifications(userId: string | number): Promise<Notification[]>{
     try {
         await dbConnect();
         const notifications = await Notifications.find({
@@ -49,9 +71,13 @@ export async function getUnreadNotifications(userId: string | number){
             isRead: false,
         })
         .select('_id type message')
-        .lean(); 
+        .lean()as Notification[];
 
-        return notifications; 
+        return notifications.map((notification) => ({
+            ...notification,
+            _id: notification._id.toString() 
+        }));
+
     } catch (error) {
         console.error("Error fetching unread notifications", error);
         return []; 
@@ -128,30 +154,58 @@ export async function createReport(userId:string,location:string,wasteType:strin
         try {
             await dbConnect();
             const report = await Reports.create({
-                user_id: userId,
-                location,
-                wasteType,
-                amount,
-                imageUrl,
-                verification_result: verificationResult,
-                status: 'pending',
-            })
-
+              user_id: userId.toString(),
+              location,
+              wasteType,
+              amount,
+              imageUrl,
+              verification_result: verificationResult,
+              status: 'pending',
+            });
+        
             const plainReport = report.toObject();
+
+            if (Buffer.isBuffer(plainReport._id)) {
+                plainReport._id = plainReport._id.toString();
+              } else if (typeof plainReport._id !== 'string') {
+                plainReport._id = String(plainReport._id);
+              }
+        
+            if (Buffer.isBuffer(plainReport.user_id)) {
+                plainReport.user_id = plainReport.user_id.toString();
+              } else if (typeof plainReport.user_id !== 'string') {
+                plainReport.user_id = String(plainReport.user_id);
+              }
             
-            const pointsEarned=10;
-              await updateRewardPoints(userId, pointsEarned)
-              await createTransactions(userId , 'earned_report', pointsEarned,'Points earned for reporting waste')
-              await createNotification(userId, `You've earned ${pointsEarned} points for reporting waste!`,'reward')
+            plainReport.createdAt = plainReport.createdAt.toISOString().split("T")[0];
+            plainReport.updatedAt = plainReport.updatedAt.toISOString();
+        
+           
+          
+            
+        
+            const pointsEarned = 10;
+            await updateRewardPoints(userId, pointsEarned);
+            await createTransactions(userId, 'earned_report', pointsEarned, 'Points earned for reporting waste');
+            await createNotification(userId, `You've earned ${pointsEarned} points for reporting waste!`, 'reward');
+        
+            return {
+              _id: plainReport._id,
+              user_id: plainReport.user_id,
+              location: plainReport.location,
+              wasteType: plainReport.wasteType,
+              amount: plainReport.amount,
+              imageUrl: plainReport.imageUrl,
+              createdAt: plainReport.createdAt,
+              updatedAt: plainReport.updatedAt,
+            };
 
-            return plainReport;
-
-        } catch (error) {
-            console.error("Error creating report",error)
+          
+        }catch(error){
+            console.error("Error creating report", error);
             return null;
-            
         }
-
+            
 }
 
 
@@ -186,7 +240,7 @@ export async function updateRewardPoints(userId:string,PointsToAdd:number){
                     description
                 })
 
-                return transaction;
+                return JSON.parse(JSON.stringify(transaction));
                 
             } catch (error) {
                 console.error('Error creating transactions',error)
@@ -214,13 +268,18 @@ export async function updateRewardPoints(userId:string,PointsToAdd:number){
 
 
 
-    export async function getRecentReports(limit:number=10){
+    export async function getRecentReports(limit:number=10): Promise<Report[]>{
         try {
             const reports = await Reports.find({})
                 .sort({ createdAt: -1 })
                 .limit(limit)
-                .lean(); 
-            return reports;
+                .lean() as [Report];
+            
+                return reports.map(report => ({
+                    ...report,
+                    _id: report._id.toString(), 
+                }));
+
         } catch (error) {
             console.error("Error fetching recent reports:", error);
             return [];
@@ -282,6 +341,7 @@ export async function getWasteCollectionTask(limit:number = 20){
          
         return tasks.map((task:any)=> ({
             ...task,
+            _id: task._id.toString(),
             createdAt: task.createdAt.toISOString().split('T')[0]
         }))
     } catch (error) {
@@ -292,7 +352,7 @@ export async function getWasteCollectionTask(limit:number = 20){
 
 
 
-export async function updateTaskStatus(reportId: string, newStatus: string, collectorId?: string) {
+export async function updateTaskStatus(reportId: string, newStatus: string, collectorId?: string): Promise<Report | null> {
     try {
       
       const updateData: any = { status: newStatus };
@@ -306,9 +366,18 @@ export async function updateTaskStatus(reportId: string, newStatus: string, coll
         reportId,       
         { $set: updateData }, 
         { new: true }     
-      ).lean(); 
+      ).lean()as Report;
   
-      return updatedReport;
+      
+      if (updatedReport) {
+        return {
+            ...updatedReport,
+            _id: updatedReport._id.toString(), 
+        };
+    }
+
+    return null;
+
     } catch (error) {
       console.error("Error updating task status:", error);
       throw error;
@@ -360,12 +429,13 @@ export async function saveReward(userId:string, amount:number) {
         points: amount,
         level: 1,
         isAvailable: true,
-      });
+      }); 
   
       
       await createTransactions(userId, 'earned_collect', amount, 'Points earned for collecting waste');
-  
-      return reward;
+
+
+      return JSON.parse(JSON.stringify(reward));
 
     } catch (error) {
       console.error("Error saving reward:", error);
@@ -389,7 +459,7 @@ export async function saveCollectionWaste(reportId:string, collectorId:string,) 
         status: 'verified',
       });
   
-      return collectedWaste;
+      return JSON.parse(JSON.stringify(collectedWaste));
     } catch (error) {
       console.error("Error saving collected waste:", error);
       throw error;
