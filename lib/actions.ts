@@ -24,6 +24,22 @@ interface Report {
     createdAt?: Date; 
 }
 
+interface Reward {
+    _id: string;
+    name: string;
+    points: number;
+    description: string;
+    collectionInfo: string;
+}
+
+interface Transaction {
+    _id: string;
+    type: string;
+    amount: number;
+    description: string;
+    date: string;  
+}
+
 export const createUser= async(email:string,name:string): Promise<{ email: string; name: string } | null>=>{
 
     try {
@@ -52,8 +68,8 @@ export const getUserByEmail=async(email: string): Promise<any | null>=>{
     try {
         
         await dbConnect();
-        const user=await Users.findOne({email}).lean()
-      return JSON.parse(JSON.stringify(user));
+        const user=await Users.findOne({email}).lean()  //// lean converts mongoose document to a plain object
+        return user ? { ...user, _id: user._id.toString() } : null;
     
          
     } catch (error) {
@@ -105,7 +121,7 @@ export async function getUserBalance(userId: string | number): Promise<number>{
     }
 }
 
-export async function getRewardTransactions(userId: string | number){
+export async function getRewardTransactions(userId: string | number): Promise<Transaction[] | null>{
     try {
       
         const transactions = await Transactions.find({
@@ -117,12 +133,14 @@ export async function getRewardTransactions(userId: string | number){
             date: 1
         }).sort({ date: -1})
           .limit(10);   
-
-          const formattedTransactions= transactions.map((t)=> ({
-                 ...t,
-                 date: t.date.toISOString().split('T')[0]  // 'YYYY-MM-DD'
-          }));
-
+ 
+          const formattedTransactions: Transaction[] = transactions.map((t) => ({
+            _id: t._id.toString(),
+            type: t.type,
+            amount: t.amount,
+            description: t.description,
+            date: t.date.toISOString().split('T')[0] // 'YYYY-MM-DD'
+        }));
           return formattedTransactions;
             
     } catch (error) {
@@ -287,7 +305,7 @@ export async function updateRewardPoints(userId:string,PointsToAdd:number){
     }
 
 
-    export async function getAvailableRewards(userId: string){
+    export async function getAvailableRewards(userId: string): Promise<Reward[]> {
         
         try {
             const userTransactions = await getRewardTransactions(userId);
@@ -305,7 +323,7 @@ export async function updateRewardPoints(userId:string,PointsToAdd:number){
             const availableRewards = await Rewards.find({
                 isAvailable: true,
                 points: { $lte: userPoints }
-            }).select('_id name points description collectionInfo');
+            }).lean().select('_id name points description collectionInfo')as Reward[];
     
             const allRewards = [
                 {
@@ -316,9 +334,13 @@ export async function updateRewardPoints(userId:string,PointsToAdd:number){
                     collectionInfo: "Points earned from reporting and collecting waste"
                 },
                 ...availableRewards
-            ];
+            ]
     
-            return allRewards;
+            
+          return allRewards.map(reward => ({
+            ...reward,
+            _id: reward._id.toString()
+           })); 
     
         } catch (error) {
             console.error("Error fetching available rewards:", error);
@@ -464,4 +486,55 @@ export async function saveCollectionWaste(reportId:string, collectorId:string,) 
       console.error("Error saving collected waste:", error);
       throw error;
     }
+  };
+
+
+
+  export async function redeemReward(userId: string , rewardId:string){
+     
+       try {
+        
+        const userReward= await getOrCreateReward(userId) as any;
+
+        if(userReward === 0){
+            const updatedReward = await userReward.findOneAndUpdate({userId},
+                { points: 0, updateAt: new Date()},
+                {new: true}     // Return the updated document
+            );
+
+
+            await createTransactions(userId, 'redeemed', userReward.points, `Redeemed all points: ${userReward.points}`);
+
+            return updatedReward;
+        }else{
+
+            const availableReward= await Rewards.findOne({_id: rewardId})
+
+            if (!userReward || !availableReward || userReward.points < availableReward.points) {
+                throw new Error('Insufficient points or invalid reward');
+              }
+
+
+              const updatedReward= await userReward.findOneAndUpdate(
+                {userId},
+                {
+                    $inc: { points: -availableReward.points},
+                    updatedAt: new Date(),
+                },
+
+                { new: true}
+              )  
+
+              await createTransactions(userId, 'redeemed', availableReward[0].points, `Redeemed: ${availableReward[0].name}`);
+
+                return updatedReward;
+
+        }
+
+     
+
+       } catch (error) {
+        console.error("Error redeeming reward:", error);
+        throw error;
+       }
   }

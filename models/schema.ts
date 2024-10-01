@@ -1,10 +1,15 @@
 import mongoose from "mongoose";
-import  { Schema,model} from "mongoose"
+import  { Schema,model,Model} from "mongoose"
 
 
+interface IUser extends Document {
+    _id: string; // or ObjectId if you prefer to use MongoDB ObjectId
+    email: string;
+    name: string;
+}
 
 // User Schema
-const UserSchema = new Schema({
+const UserSchema = new Schema<IUser>({
     email: {
         type: String,
         required: true,
@@ -18,7 +23,7 @@ const UserSchema = new Schema({
     timestamps: true,
 });
 
-const Users = mongoose.models.user || model('user', UserSchema);
+const Users:Model<IUser> = mongoose.models.user || model<IUser>('user', UserSchema);
 
 // Report Schema
 const reportSchema = new Schema({
