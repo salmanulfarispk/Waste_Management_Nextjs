@@ -2,7 +2,7 @@
 import mongoose from "mongoose";
 import { Users,Notifications, Transactions, Reports,Rewards, CollectedWastes} from "../models/schema"
 import dbConnect from "./dbConfig";
-
+import { ObjectId } from 'mongodb';
 
 
 interface Notification {
@@ -79,7 +79,7 @@ export const getUserByEmail=async(email: string): Promise<any | null>=>{
 }
 
 
-export async function getUnreadNotifications(userId: string | number): Promise<Notification[]>{
+export async function getUnreadNotifications(userId: string): Promise<Notification[]>{
     try {
         await dbConnect();
         const notifications = await Notifications.find({
@@ -100,7 +100,7 @@ export async function getUnreadNotifications(userId: string | number): Promise<N
     }
 }
 
-export async function getUserBalance(userId: string | number): Promise<number>{
+export async function getUserBalance(userId: string): Promise<number>{
     try {
         await dbConnect();
         const transactions = await getRewardTransactions(userId) || []; 
@@ -121,7 +121,7 @@ export async function getUserBalance(userId: string | number): Promise<number>{
     }
 }
 
-export async function getRewardTransactions(userId: string | number): Promise<Transaction[] | null>{
+export async function getRewardTransactions(userId: string): Promise<Transaction[] | null>{
     try {
       
         const transactions = await Transactions.find({
@@ -250,20 +250,21 @@ export async function updateRewardPoints(userId:string,PointsToAdd:number){
         amount: number,description:string ){
          
             try {
-
-                const transaction= await Transactions.create({
-                    userId,
-                    type,
-                    amount,
-                    description
-                })
-
-                return JSON.parse(JSON.stringify(transaction));
-                
-            } catch (error) {
-                console.error('Error creating transactions',error)
+                const transaction = new Transactions({
+                  userId: new ObjectId(userId),
+                  type,
+                  amount,
+                  description,
+                  date: new Date(),
+                });
+            
+                await transaction.save(); 
+            
+                return transaction;
+              } catch (error) {
+                console.error("Error creating transaction:", error);
                 throw error;
-            }
+              }
     };
 
 
@@ -324,6 +325,8 @@ export async function updateRewardPoints(userId:string,PointsToAdd:number){
                 isAvailable: true,
                 points: { $lte: userPoints }
             }).lean().select('_id name points description collectionInfo')as Reward[];
+           
+            
     
             const allRewards = [
                 {
@@ -490,51 +493,57 @@ export async function saveCollectionWaste(reportId:string, collectorId:string,) 
 
 
 
-  export async function redeemReward(userId: string , rewardId:string){
-     
-       try {
-        
-        const userReward= await getOrCreateReward(userId) as any;
+    export async function redeemReward(userId: string, rewardId: string) {
+        try {
 
-        if(userReward === 0){
-            const updatedReward = await userReward.findOneAndUpdate({userId},
-                { points: 0, updateAt: new Date()},
-                {new: true}     // Return the updated document
+            console.log('userId:', userId);
+            console.log('rewardId:', rewardId);
+            
+          const userReward = await getOrCreateReward(userId);
+          
+          if (rewardId === '0') {
+            const updatedReward = await Rewards.findOneAndUpdate(
+              { userId: new ObjectId(userId) },
+              { 
+                $set: { 
+                  points: 0, 
+                  updatedAt: new Date() 
+                }
+              },
+              { new: true } // Return the updated document
             );
-
-
+      
             await createTransactions(userId, 'redeemed', userReward.points, `Redeemed all points: ${userReward.points}`);
+            return updatedReward.value; 
+        
+          } else {
 
-            return updatedReward;
-        }else{
-
-            const availableReward= await Rewards.findOne({_id: rewardId})
-
+           
+            const availableReward = await Rewards.findById(new ObjectId(rewardId)); 
+      
             if (!userReward || !availableReward || userReward.points < availableReward.points) {
-                throw new Error('Insufficient points or invalid reward');
-              }
-
-
-              const updatedReward= await userReward.findOneAndUpdate(
-                {userId},
-                {
-                    $inc: { points: -availableReward.points},
-                    updatedAt: new Date(),
+              throw new Error("Insufficient points or invalid reward.");
+            }
+        
+            const updatedReward = await Rewards.findOneAndUpdate(
+              { userId: new ObjectId(userId) },
+              {
+                $set: {
+                  points: userReward.points - availableReward.points,
+                  updatedAt: new Date(),
                 },
-
-                { new: true}
-              )  
-
-              await createTransactions(userId, 'redeemed', availableReward[0].points, `Redeemed: ${availableReward[0].name}`);
-
-                return updatedReward;
-
+              },
+              { new: true } // Return the updated document
+            );
+      
+            await createTransactions(userId, 'redeemed', availableReward.points, `Redeemed: ${availableReward.name}`);
+      
+            return updatedReward.value;
+          }
+        } catch (error) {
+          console.error("Error redeeming reward:", error);
+          throw error;
         }
+      }
 
-     
 
-       } catch (error) {
-        console.error("Error redeeming reward:", error);
-        throw error;
-       }
-  }

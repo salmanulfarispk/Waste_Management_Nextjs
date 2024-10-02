@@ -34,7 +34,7 @@ export default function RewardsPage(){
     const [loading, setLoading] = useState(true)
 
       
-         
+    // console.log(rewards.map(r=> r._id));
 
   useEffect(()=>{
    
@@ -55,10 +55,12 @@ export default function RewardsPage(){
                     setTransactions(fetchTransactions as Transaction[])
 
                     const fetchedRewards= await getAvailableRewards(fetchUser._id)
+                    
+                    
                     setRewards(fetchedRewards.filter(r => r.points > 0)) 
 
                     const calculatedBalance = (fetchTransactions ?? []).reduce((acc, transaction) => {
-                        const amount = transaction.amount ?? 0; //If trans.amount is null or undefined, return 0.otherwise return tran.amonut
+                        const amount = transaction.amount ?? 0;   //If trans.amount is null or undefined, return 0.otherwise return tran.amonut
                         return transaction.type.startsWith('earned') ? acc + amount : acc - amount;
                     }, 0);
                     
@@ -85,90 +87,93 @@ export default function RewardsPage(){
 
   },[])
 
-
-
-    const handleRedeemReward = async(rewardId: string)=>{
-       if(!user){
-        toast.error('Please log in to redeem rewards.')
-        return;
-       }
-
-
-       const reward= rewards.find(r => r._id === rewardId)
-       if(reward && balance >= reward.points && reward.points > 0 ){
+  
+  const handleRedeemReward = async (rewardId: string) => {
+    if (!user) {
+      toast.error('Please log in to redeem rewards.')
+      return
+    }
+    
           
-        try {
-            
-            if(balance < reward.points){
-                toast.error('Insufficient balance to redeem this reward')
-                 return;
-            }
-            
-
-            await redeemReward(user._id, rewardId)  // Update database
-
-            await createTransactions(user._id, 'redeemed', reward.points, `Redeemed ${reward.name}`);   // Create a new transaction record
-
-            await refreshUserData();
-
-
-            toast.success(`You have successfully redeemed all your points!`);
-
-        } catch (error) {
-            console.error('Error redeeming all points:', error);
-            toast.error('Failed to redeem all points. Please try again.');
-        }
-       }else{
-        toast.error('No points available to redeem')
-       }
-
-    };
-
-
-    const handleRedeemAllPoints = async () => {
-        if (!user) {
-          toast.error('Please log in to redeem points.');
-          return;
-        }
+    const reward = rewards.find(r => r._id === rewardId);
     
-        if (balance > 0) {
-          try {
-
-            await redeemReward(user._id, '');
-            
-            await createTransactions(user._id, 'redeemed', balance, 'Redeemed all points');
     
-            await refreshUserData();
-    
-            toast.success(`You have successfully redeemed all your points!`);
-          } catch (error) {
-            console.error('Error redeeming all points:', error);
-            toast.error('Failed to redeem all points. Please try again.');
-          }
-        } else {
-          toast.error('No points available to redeem')
+    if (reward && balance >= reward.points && reward.points > 0) {
+      
+       
+      try {
+        if (balance < reward.points) {
+          toast.error('Insufficient balance to redeem this reward')
+          return
         }
+          
+          
+        await redeemReward(user._id, rewardId);
+        
+        await createTransactions(user._id, 'redeemed', reward.points, `Redeemed ${reward.name}`);
+
+        await refreshUserData();
+
+        toast.success(`You have successfully redeemed: ${reward.name}`)
+      } catch (error) {
+        console.error('Error redeeming reward:', error)
+        toast.error('Failed to redeem reward. Please try again.')
       }
+    } else {
+      toast.error('Insufficient balance or invalid reward cost')
+    }
+  }
+     
 
-    const refreshUserData =async()=>{
-        if (user) {
-            const fetchedUser = await getUserByEmail(user.email);
-            if (fetchedUser) {
-              const fetchedTransactions = await getRewardTransactions(fetchedUser._id);
-              setTransactions(fetchedTransactions as Transaction[]);
-              const fetchedRewards = await getAvailableRewards(fetchedUser._id);
-              setRewards(fetchedRewards.filter(r => r.points > 0));
-              
-              // Re-calculate balance
-              const calculatedBalance =  (fetchedTransactions || []).reduce((acc, transaction) => {
-                return transaction.type.startsWith('earned') ? acc + transaction.amount : acc - transaction.amount
-              }, 0)
-
-              setBalance(Math.max(calculatedBalance, 0)) 
-            }
-          }
+  const handleRedeemAllPoints = async () => {
+    if (!user) {
+      toast.error('Please log in to redeem points.');
+      return;
     }
 
+    if (balance > 0) {
+      try {
+
+        await redeemReward(user._id, "0");
+        
+        await createTransactions(user._id, 'redeemed', balance, 'Redeemed all points');
+
+        await refreshUserData();
+
+        toast.success(`You have successfully redeemed all your points!`);
+      } catch (error) {
+        console.error('Error redeeming all points:', error);
+        toast.error('Failed to redeem all points. Please try again.');
+      }
+    } else {
+      toast.error('No points available to redeem')
+    }
+  }
+
+  const refreshUserData = async () => {
+    if (user) {
+      const fetchedUser = await getUserByEmail(user.email);
+      if (fetchedUser) {
+        const fetchedTransactions = await getRewardTransactions(fetchedUser.id);
+        
+        console.log(fetchedTransactions);
+        
+        const validTransactions = fetchedTransactions ?? []; 
+        setTransactions(validTransactions as Transaction[]);
+  
+        const fetchedRewards = await getAvailableRewards(fetchedUser.id);
+        setRewards(fetchedRewards.filter(r => r.points > 0)); 
+  
+        const calculatedBalance = validTransactions.reduce((acc, transaction) => {
+          return transaction.type.startsWith('earned') ? acc + transaction.amount : acc - transaction.amount;
+        }, 0);
+        
+        setBalance(Math.max(calculatedBalance, 0)); // Ensure balance is never negative
+      }
+    }
+  };
+  
+ 
 
     
   if (loading) {
@@ -238,7 +243,7 @@ export default function RewardsPage(){
                   </div>
                   <p className="text-gray-600 mb-2">{reward.description}</p>
                   <p className="text-sm text-gray-500 mb-4">{reward.collectionInfo}</p>
-                  {reward._id === ''? (
+                  {reward._id === '0'? ( 
                     <div className="space-y-2">
                       <button 
                         onClick={handleRedeemAllPoints}
@@ -252,11 +257,11 @@ export default function RewardsPage(){
                   ) : (
                     <button 
                       onClick={() => handleRedeemReward(reward._id)}
-                      className="w-full bg-green-500 hover:bg-green-600 text-white"
+                      className="w-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center py-2 rounded-md"
                       disabled={balance < reward.points}
                     >
                       <Gift className="w-4 h-4 mr-2" />
-                      Redeem Reward
+                      Redeem Reward 
                     </button>
                   )}
                 </div>
