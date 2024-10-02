@@ -330,7 +330,7 @@ export async function updateRewardPoints(userId:string,PointsToAdd:number){
     
             const allRewards = [
                 {
-                    _id: 'your-points-id',
+                    _id: '0',
                     name: "Your points",
                     points: userPoints,
                     description: "Redeem your earned points",
@@ -496,12 +496,11 @@ export async function saveCollectionWaste(reportId:string, collectorId:string,) 
     export async function redeemReward(userId: string, rewardId: string) {
         try {
 
-            console.log('userId:', userId);
-            console.log('rewardId:', rewardId);
-            
+
           const userReward = await getOrCreateReward(userId);
           
           if (rewardId === '0') {
+
             const updatedReward = await Rewards.findOneAndUpdate(
               { userId: new ObjectId(userId) },
               { 
@@ -520,21 +519,22 @@ export async function saveCollectionWaste(reportId:string, collectorId:string,) 
 
            
             const availableReward = await Rewards.findById(new ObjectId(rewardId)); 
-      
+             
+             
             if (!userReward || !availableReward || userReward.points < availableReward.points) {
               throw new Error("Insufficient points or invalid reward.");
             }
-        
+          
+            
             const updatedReward = await Rewards.findOneAndUpdate(
-              { userId: new ObjectId(userId) },
-              {
-                $set: {
-                  points: userReward.points - availableReward.points,
-                  updatedAt: new Date(),
+                { userId: userId }, 
+                { 
+                  $inc: { points: -availableReward.points },  
+                  updatedAt: new Date(),  
                 },
-              },
-              { new: true } // Return the updated document
-            );
+                { new: true }  // Return the updated document
+              );
+             
       
             await createTransactions(userId, 'redeemed', availableReward.points, `Redeemed: ${availableReward.name}`);
       
