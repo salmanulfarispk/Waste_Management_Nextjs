@@ -547,3 +547,39 @@ export async function saveCollectionWaste(reportId:string, collectorId:string,) 
       }
 
 
+       
+      export async function getAllRewards() {
+        try {
+          const rewards = await Rewards.aggregate([
+            {
+              $lookup: {
+                from: 'users',  
+                localField: 'userId',
+                foreignField: '_id',
+                as: 'userDetails'
+              }
+            },
+            {
+              $unwind: '$userDetails'  
+            },
+            {
+              $project: {
+                id: '$_id',
+                userId: 1,
+                points: 1,
+                level: 1,
+                createdAt: 1,
+                userName: '$userDetails.name'  
+              }
+            },
+            {
+              $sort: { points: -1 }  
+            }
+          ]);
+      
+          return rewards;
+        } catch (error) {
+          console.error("Error fetching all rewards:", error);
+          return [];
+        }
+      }
