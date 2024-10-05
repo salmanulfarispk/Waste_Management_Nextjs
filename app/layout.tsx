@@ -56,11 +56,11 @@ export default function RootLayout({
           {/* header */}
                <Header onMenuClick={()=> setSidebarOpen(!sidebarOpen)} totalEarnings={totalEarnings} />
 
-                <div className="flex flex-1">
+                <div className="flex flex-1 w-full">
                  {/* sidebar */}
                   <Sidebar open={sidebarOpen}/>
 
-                 <main className="flex-1 p-4 lg:p-8 ml-0 lg:ml-64  transition-all duration-300">
+                 <main className="flex-1 p-4 lg:p-8 ml-0 lg:ml-64  transition-all duration-300 w-full">
                    {children}
                  </main>
                  </div>

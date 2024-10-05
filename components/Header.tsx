@@ -73,7 +73,7 @@ useEffect(() => {
         if (user.email) {
           localStorage.setItem("userEmail", user.email);
           try {
-            const createdUser = await createUser(user.email, user.name || "Anonymous User");
+             await createUser(user.email, user.name || "Anonymous User");
             
           } catch (error) {
             console.error("Error in creating user", error);
@@ -273,7 +273,7 @@ useEffect(() => {
 
           <div className="flex items-center">
                 { isMobile && (
-                  <button className="btn mr-2">
+                  <button className="hidden  btn mr-2">
                     <Search className="h-5 w-5" />
                  </button>
                 )}
@@ -282,7 +282,7 @@ useEffect(() => {
     <summary className="btn mr-2 relative bg-transparent shadow-none border-none hover:bg-gray-100">
     <Bell className="h-5 w-5 text-gray-800"/>
           {notification.length > 0 &&(
-                 <div className="badge badge-neutral px-2 min-w-[1.2rem] h-5">
+                 <div className="badge badge-neutral px-2 min-w-[1.2rem] h-5 hidden md:block">
                    {notification.length}
                  </div>
                  )}
